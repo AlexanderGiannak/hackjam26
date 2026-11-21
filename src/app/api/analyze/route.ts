@@ -10,7 +10,15 @@ import { CATEGORIES, COLORS, ISSUE_TYPES } from "@/lib/types";
 export const runtime = "nodejs";
 
 // Tried in order until one works for this key. GEMINI_MODEL (if set) goes first.
-const MODELS = [process.env.GEMINI_MODEL, "gemini-2.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash-lite"].filter(
+// 3.1-flash-lite answers in ~1s; larger flash models timed out past 20s in testing (2026-11-21),
+// and the 2.5 models return 404 for new keys. Later entries are fallbacks only.
+const MODELS = [
+  process.env.GEMINI_MODEL,
+  "gemini-3.1-flash-lite",
+  "gemini-3-flash-preview",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+].filter(
   (m, i, a): m is string => !!m && a.indexOf(m) === i,
 );
 let workingModel: string | null = null;
@@ -95,8 +103,8 @@ export async function POST(req: Request) {
       const res = await callModel(model, key, body.image, broken, controller.signal);
       last = res.status;
       if (res.status === 429) return NextResponse.json({ error: "AI is busy, try again in a minute" }, { status: 429 });
-      // model missing, retired, or not available to this key: try the next one
-      if (res.status === 404 || res.status === 403 || res.status === 400) continue;
+      // model missing, retired, not available to this key, or overloaded: try the next one
+      if (res.status === 404 || res.status === 403 || res.status === 400 || res.status === 503) continue;
       if (!res.ok) return NextResponse.json({ error: `AI request failed (${res.status})` }, { status: 502 });
       const json = await res.json();
       const text: string | undefined = json?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text;
