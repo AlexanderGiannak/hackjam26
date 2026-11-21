@@ -252,12 +252,13 @@ export const buildingBlurb = (b: Building) => BLURBS[b.code] ?? KIND_BLURB[b.kin
 /** Stand-in for a building photo (V2 shows "Photo of building"): the building code on a tinted tile. */
 /** Buildings with a photo in public/buildings (sources in public/buildings/SOURCES.md). */
 const PHOTOS = new Set([
-  // residence halls (USF Housing photos)
+  // USF photos (Housing, USF News)
   "BEA", "BET", "CAS", "CYP", "END", "HOR", "JUN", "MAP", "PIN", "POP", "SUM", "HOL", "KOS",
+  "GRK", "HON",
   // Wikimedia Commons photos
   "LIB", "MSC", "REC", "BSN", "ENB", "ISA", "CIS",
-  // pinned OpenStreetMap snapshots (no free photo found yet)
-  "MDL", "CPR", "SOC", "GRK", "HON",
+  // pinned OpenStreetMap snapshots until someone takes a photo
+  "MDL", "CPR", "SOC",
 ]);
 
 function BuildingTile({ b, small }: { b: Building; small?: boolean }) {

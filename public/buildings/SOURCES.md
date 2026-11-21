@@ -18,6 +18,8 @@ They belong to USF; replace them if USF asks, or before using the app beyond the
 | SUM | https://www.usf.edu/housing/images/housing-options/the-village/summit_hall_suite_exterior-2.jpg |
 | HOL | https://www.usf.edu/housing/images/housing-options/apartment-style/holly-apartments/holly-apt-exterior.jpg |
 | KOS | https://www.usf.edu/housing/images/housing-options/apartment-style/kosove-apartments/kosove-hall-exterior.jpg |
+| GRK | https://www.usf.edu/housing/images/housing-options/traditional-style/house-5-12-exterior.png (a Greek Village house) |
+| HON | https://www.usf.edu/images/news/2023/usf-unveils-historic-new-judy-genshaft-honors-college-building/building.png (USF News) |
 
 ## Wikimedia Commons photos
 
@@ -35,6 +37,6 @@ Freely licensed; credit is required wherever the photos are shown or shared. Cro
 
 ## Map snapshots
 
-No free photo exists yet for MDL, CPR, SOC, GRK, or HON (Judy Genshaft Honors College), so these are
+No photo found yet for MDL, CPR, or SOC, so these are
 OpenStreetMap snapshots (zoom 18) with a pin on the building centroid. Map data © OpenStreetMap contributors (ODbL);
 the credit is printed on each image. Swap in a real photo by replacing the file with the same name.

@@ -28,9 +28,10 @@ function Browse() {
 
   useEffect(() => {
     setRows(null);
+    setError(null);
     listReports(tab)
       .then((r) => setRows(r.filter((x) => x.status !== "resolved")))
-      .catch((e) => setError(e.message));
+      .catch(() => setError("We couldn't load posts right now. Try again in a minute."));
   }, [tab]);
 
   const filtered = useMemo(() => {
@@ -39,7 +40,7 @@ function Browse() {
     return rows.filter((r) => {
       if (cat && r.category !== cat) return false;
       if (bld && canonicalBuildingName(r.building) !== bld) return false;
-      const hay = [r.description, r.color, r.brand, r.building, r.spot, ...r.tags, r.category && CATEGORY_LABELS[r.category]]
+      const hay = [r.item_name, r.description, r.color, r.brand, r.building, r.spot, ...r.tags, r.category && CATEGORY_LABELS[r.category]]
         .join(" ")
         .toLowerCase();
       return terms.every((t) => hay.includes(t));
@@ -98,8 +99,18 @@ function Browse() {
       {tab === "lost" && (
         <p className="text-sm text-muted">🔒 What makes a lost item unique stays private: it&apos;s how the office checks the real owner.</p>
       )}
-      {rows && filtered.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-line bg-white p-5 text-muted">Nothing matches. Try fewer words.</p>
+      {rows && rows.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-line bg-white p-5 text-muted">
+          <p className="font-semibold text-ink">{tab === "found" ? "No found items yet." : "No lost items yet."}</p>
+          <p className="mt-1 text-sm">
+            {tab === "found"
+              ? "When someone turns something in, it shows up here."
+              : "When someone reports a lost item, it shows up here."}
+          </p>
+        </div>
+      )}
+      {rows && rows.length > 0 && filtered.length === 0 && (
+        <p className="rounded-2xl border border-dashed border-line bg-white p-5 text-muted">Nothing matches. Try fewer words or clear the filters.</p>
       )}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
         {filtered.map((r) => (

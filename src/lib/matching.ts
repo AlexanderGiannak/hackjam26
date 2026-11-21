@@ -123,8 +123,8 @@ export function scorePair(a: Report, b: Report): Match | null {
     if (gapDays <= 2) timeNote = ", around the same time";
   }
 
-  const lk = keywords(lost.description, lost.tags, lost.brand);
-  const fk = keywords(found.description, found.tags, found.brand);
+  const lk = keywords(lost.description, lost.tags, lost.brand, lost.item_name);
+  const fk = keywords(found.description, found.tags, found.brand, found.item_name);
   const shared = [...lk].filter((w) => fk.has(w));
   if (shared.length) score += Math.min(20, shared.length * 8);
 
