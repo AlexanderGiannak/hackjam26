@@ -152,6 +152,33 @@ export async function setStatus(id: string, status: Status, note = "", ops?: str
   ).report;
 }
 
+/** "This is mine: claim it": tells the finder where to leave it and keeps the proof answer private. */
+export async function claim(lostId: string, foundId: string, answer = ""): Promise<{ lost: Report; found: Report; desk: string }> {
+  const body = { found_id: foundId, answer };
+  if (isLocalMode) return svc.claimMatch(repo(), lostId, body, actor(lostId));
+  return call(`/api/reports/${encodeURIComponent(lostId)}/claim`, {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+    owner: tokenFor(lostId),
+  });
+}
+
+// ---------- "Not mine": matches this device dismissed ----------
+const DISMISSED = "bullhorn.not-mine.v1";
+export function dismissed(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(DISMISSED) || "[]");
+  } catch {
+    return [];
+  }
+}
+export function dismiss(lostId: string, foundId: string) {
+  try {
+    localStorage.setItem(DISMISSED, JSON.stringify([`${lostId}:${foundId}`, ...dismissed()].slice(0, 200)));
+  } catch {}
+}
+
 export type MyItem = svc.MyReport & { following?: boolean };
 
 /** This device's own reports (with match counts) plus the ones it follows after a "me too". */

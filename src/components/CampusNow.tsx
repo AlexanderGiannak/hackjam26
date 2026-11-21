@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { listReports } from "@/lib/client";
 import { reportTitle, type Report } from "@/lib/types";
 import { MapView, TYPE_COLORS } from "./MapView";
 
-/** Home page snapshot: open problems on a map, with how many students they hit. */
+/** Home page snapshot (V2): three numbers over a map of open problems. */
 export function CampusNow() {
   const [rows, setRows] = useState<Report[] | null>(null);
   useEffect(() => {
@@ -16,17 +15,14 @@ export function CampusNow() {
   const fixed = (rows ?? []).length - open.length;
   const people = open.reduce((n, r) => n + 1 + r.me_too_count, 0);
   return (
-    <div className="grid gap-4 rounded-3xl border border-line bg-white p-4 sm:p-5 md:grid-cols-[260px_minmax(0,1fr)]">
-      <div className="flex flex-col justify-between gap-4">
-        <div className="grid grid-cols-3 gap-2 md:grid-cols-1">
-          <Stat n={rows ? open.length : null} label="open problems" />
-          <Stat n={rows ? people : null} label="students affected" />
-          <Stat n={rows ? fixed : null} label="fixed" />
-        </div>
-        <Link href="/issues" className="link text-[15px] text-bull">See all campus issues →</Link>
+    <section className="self-start rounded-3xl border border-line bg-white p-4 sm:p-5">
+      <div className="mb-4 grid grid-cols-3 text-center">
+        <Stat n={rows ? open.length : null} label="open issues" />
+        <Stat n={rows ? people : null} label="students affected" />
+        <Stat n={rows ? fixed : null} label="fixed" />
       </div>
       <MapView
-        className="h-56 w-full md:h-64"
+        className="h-72 w-full lg:h-80"
         zoom={15}
         markers={open
           .filter((r) => r.lat != null && r.lng != null)
@@ -40,15 +36,28 @@ export function CampusNow() {
             onClick: () => (location.href = `/r/${r.id}`),
           }))}
       />
-    </div>
+      <a href="/issues" className="link mt-3 inline-block text-[15px] text-bull">See every campus issue →</a>
+    </section>
   );
+}
+
+/** "5 waiting for their owners" on the Found items card. */
+export function FoundWaiting() {
+  const [n, setN] = useState<number | null>(null);
+  useEffect(() => {
+    listReports("found")
+      .then((r) => setN(r.filter((x) => x.status !== "resolved").length))
+      .catch(() => setN(null));
+  }, []);
+  if (n == null) return <>Waiting for their owners</>;
+  return <>{n} waiting for {n === 1 ? "its owner" : "their owners"}</>;
 }
 
 function Stat({ n, label }: { n: number | null; label: string }) {
   return (
-    <div className="md:flex md:items-baseline md:gap-2">
-      <p className="text-3xl font-bold tabular-nums text-bull">{n ?? "–"}</p>
-      <p className="text-sm text-muted">{label}</p>
+    <div>
+      <p className="text-3xl font-extrabold tabular-nums text-bull">{n ?? "–"}</p>
+      <p className="text-sm leading-tight text-muted">{label}</p>
     </div>
   );
 }

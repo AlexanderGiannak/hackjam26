@@ -10,12 +10,15 @@ import { findMatches } from "@/lib/matching";
 import { analyzePhoto, type AutoResult } from "@/lib/autofill";
 import { OFFICES } from "@/lib/offices";
 import { compressImage, readGps, redact } from "@/lib/photo";
-import { foundDropoff } from "@/lib/routing";
+import { foundDropoff, lostChecklist } from "@/lib/routing";
 import { CATEGORIES, CATEGORY_LABELS, itemTitle, type Category, type Report } from "@/lib/types";
+import Link from "next/link";
+import { OfficeCard } from "./OfficeCard";
 import {
   AutofillBanner,
   AutoTag,
-  BuildingSelect,
+  BuildingPicker,
+  Tip,
   ChoiceGrid,
   ColorSwatches,
   ErrorNote,
@@ -25,7 +28,7 @@ import {
   type AutoState,
   type Photo,
 } from "./fields";
-import { ChevronRight } from "./Icons";
+import { ChevronRight, PhoneIcon, TargetIcon } from "./Icons";
 import { PostPreview } from "./PostPreview";
 
 type Kind = "lost" | "found";
@@ -39,6 +42,14 @@ const WHEN = {
 type When = keyof typeof WHEN;
 
 type Field = "category" | "color" | "brand" | "details" | "building";
+
+/** Items that usually show up in Find My / Find My Device: a screenshot of the last location is great proof. */
+const FIND_MY: Partial<Record<Category, string>> = {
+  phone: "Most phones show up in Find My or Find My Device.",
+  earbuds: "Most AirPods / earbuds show up in Find My.",
+  laptop: "Most laptops show up in Find My or Find My Device.",
+  tablet: "Most tablets show up in Find My or Find My Device.",
+};
 
 export function ItemFlow({ type }: { type: Kind }) {
   const lost = type === "lost";
@@ -59,6 +70,8 @@ export function ItemFlow({ type }: { type: Kind }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
+  const [describe, setDescribe] = useState(false);
+  const [gotIt, setGotIt] = useState(false);
   // faces, plates, cards and screens the AI found in the first photo: pixelated on this phone before upload
   const sensitive = useRef<SensitiveBox[]>([]);
   const [candidates, setCandidates] = useState<Report[]>([]);
@@ -144,7 +157,12 @@ export function ItemFlow({ type }: { type: Kind }) {
       return n;
     });
   };
-  const editCategory = (v: Category) => (userEdit("category"), setCategory(v));
+  const editCategory = (v: Category) => {
+    // IDs never get posted: send people to the page that tells them exactly where to go.
+    if (v === "id_card") return router.push(`/${type}/id`);
+    userEdit("category");
+    setCategory(v);
+  };
   const editColor = (v: string) => (userEdit("color"), setColor(v));
   const editBrand = (v: string) => (userEdit("brand"), setBrand(v));
   const editDetails = (v: string) => (userEdit("details"), setDetails(v));
@@ -191,6 +209,7 @@ export function ItemFlow({ type }: { type: Kind }) {
     put("color", r.color, setColor);
     put("brand", r.brand, setBrand);
     put("details", r.description, setDetails);
+    if ((r.description && !touched.current.has("details")) || (r.brand && !touched.current.has("brand"))) setDescribe(true);
     if (r.tags?.length) setTags(r.tags);
     sensitive.current = r.sensitive ?? [];
 
@@ -303,8 +322,54 @@ export function ItemFlow({ type }: { type: Kind }) {
                   )
                 }
                 hint={lost ? "A photo of the item, or proof like a Find My screenshot or a receipt. Add up to 3." : undefined}
+                tip={
+                  lost && category && FIND_MY[category] ? (
+                    <Tip icon={<TargetIcon />}>
+                      {FIND_MY[category]} Add a screenshot of its last location as one of your photos.
+                    </Tip>
+                  ) : undefined
+                }
               />
               <AutofillBanner auto={auto} onUndo={auto.count ? undoAutofill : undefined} />
+              <button type="button" onClick={() => setDescribe((d) => !d)} className="link mt-4 block text-[15px] text-bull">
+                {describe ? "Hide description" : lost ? "No photo? Describe it instead" : "Add a description (optional)"}
+              </button>
+              {describe && (
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="label" htmlFor="details">
+                      Describe it
+                      {autoFields.has("details") && <AutoTag />}
+                    </label>
+                    <textarea
+                      id="details"
+                      className="field min-h-24 border-bull"
+                      value={details}
+                      maxLength={500}
+                      onChange={(e) => editDetails(e.target.value)}
+                      placeholder={lost ? "e.g. White AirPods Pro case with a small blue star sticker on the back" : "What it looks like. Skip anything private."}
+                    />
+                    <p className="mt-1.5 text-sm text-muted">
+                      {lost
+                        ? "We match your words against found posts, so details matter. Other students never see this; it's how a desk checks it's yours."
+                        : "Skip names, numbers or anything private."}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="brand">
+                      Brand / model <span className="font-normal text-muted">(optional)</span>
+                      {autoFields.has("brand") && <AutoTag />}
+                    </label>
+                    <input
+                      id="brand"
+                      className="field-soft"
+                      value={brand}
+                      onChange={(e) => editBrand(e.target.value)}
+                      placeholder="e.g. iPhone 15, Hydro Flask, JanSport"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <ChoiceGrid
@@ -316,64 +381,40 @@ export function ItemFlow({ type }: { type: Kind }) {
               auto={autoFields.has("category")}
             />
 
-            {!lost && isId && (
+            {isId && (
               <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-[15px] text-amber-900">
-                <strong>ID cards aren&apos;t posted publicly.</strong> We&apos;ll just show you where to take it so the owner&apos;s
-                information stays private.
+                <strong>This looks like an ID or card. We don&apos;t post those.</strong>{" "}
+                <Link href={`/${type}/id`} className="font-semibold underline">
+                  {lost ? "Here's who to call about a lost ID" : "Here's where to hand it in"}
+                </Link>
+                .
               </div>
             )}
 
             <ColorSwatches value={color} onChange={editColor} auto={autoFields.has("color")} />
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <BuildingSelect
-                id="building"
-                className="sm:col-span-2 lg:col-span-1"
-                label={lost ? "Where do you think you lost it?" : "Where did you find it?"}
-                value={building}
-                onChange={editBuilding}
-                note={gpsNote}
-                auto={autoFields.has("building")}
-              />
-              {lost && (
-                <div>
-                  <label className="label" htmlFor="when">When?</label>
-                  <select id="when" className="field" value={when} onChange={(e) => setWhen(e.target.value as When)}>
-                    {(Object.keys(WHEN) as When[]).map((k) => (
-                      <option key={k} value={k}>{WHEN[k].label}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
+            <BuildingPicker
+              label={lost ? "Where do you think you lost it?" : "Where did you find it?"}
+              value={building}
+              onChange={editBuilding}
+              note={gpsNote}
+              auto={autoFields.has("building")}
+            />
 
-            <div>
-              <label className="label" htmlFor="brand">
-                Brand / model <span className="font-normal text-muted">(optional)</span>
-                {autoFields.has("brand") && <AutoTag />}
-              </label>
-              <input
-                id="brand"
-                className="field-soft"
-                value={brand}
-                onChange={(e) => editBrand(e.target.value)}
-                placeholder="e.g. iPhone 15, Hydro Flask, JanSport"
-              />
-            </div>
+            {lost && (
+              <div>
+                <label className="label" htmlFor="when">When?</label>
+                <select id="when" className="field" value={when} onChange={(e) => setWhen(e.target.value as When)}>
+                  {(Object.keys(WHEN) as When[]).map((k) => (
+                    <option key={k} value={k}>{WHEN[k].label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-            <div>
-              <label className="label" htmlFor="details">
-                Anything else? <span className="font-normal text-muted">(optional)</span>
-                {autoFields.has("details") && <AutoTag />}
-              </label>
-              <textarea
-                id="details"
-                className="field-soft min-h-20"
-                value={details}
-                onChange={(e) => editDetails(e.target.value)}
-                placeholder={lost ? "e.g. Clear case with a Bulls sticker" : "What it looks like. Skip anything private."}
-              />
-            </div>
+            {lost && building && !isId && (
+              <NextSteps category={category || null} building={building} gotIt={gotIt} onGotIt={() => setGotIt(true)} />
+            )}
           </div>
 
           <div className="mt-6 space-y-3 lg:hidden">
@@ -421,6 +462,48 @@ export function ItemFlow({ type }: { type: Kind }) {
             </button>
           </div>
         </aside>
+      </div>
+    </div>
+  );
+}
+
+/** V2 "What to do next": once you pick a building, call these first. If one has it, you never need to post. */
+function NextSteps({ category, building, gotIt, onGotIt }: { category: Category | null; building: string; gotIt: boolean; onGotIt: () => void }) {
+  const steps = lostChecklist(OFFICES, category, building);
+  const what = category ? CATEGORY_LABELS[category].toLowerCase() : "item";
+  return (
+    <div className="rounded-2xl border-[1.5px] border-bull bg-white p-4">
+      <h3 className="text-lg font-bold">What to do next</h3>
+      <p className="text-[15px] text-muted">
+        Try these in order for your {what} lost in {building}.
+      </p>
+      <div className="mt-3">
+        <Tip icon={<PhoneIcon className="h-5 w-5" />}>
+          <strong>Call first.</strong> If they already have it, you won&apos;t need to post anything.
+        </Tip>
+      </div>
+      <ol className="mt-4 space-y-5">
+        {steps.map((s, i) => (
+          <li key={s.office.id}>
+            <OfficeCard office={s.office} step={i + 1} why={s.why} bare />
+          </li>
+        ))}
+      </ol>
+      <div className="mt-5 border-t border-line pt-4">
+        {gotIt ? (
+          <div className="rounded-xl bg-bull-soft p-3 text-[15px]">
+            <strong>Great, glad you got it back!</strong> Nothing was posted.{" "}
+            <Link href="/" className="link">Back to home</Link>
+          </div>
+        ) : (
+          <>
+            <p className="font-semibold">Did one of them have it?</p>
+            <button type="button" onClick={onGotIt} className="btn-ghost mt-2 w-full">
+              Yes, they have it. I&apos;m done
+            </button>
+            <p className="mt-2 text-sm text-muted">No luck? Keep going and post it so finders can see it.</p>
+          </>
+        )}
       </div>
     </div>
   );

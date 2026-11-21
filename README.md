@@ -39,13 +39,14 @@ npm run check          # lint + typecheck + 59 tests + matching eval
 
 | | |
 |---|---|
-| **Three flows, one question** | *I lost something*, *I found something*, *Report a problem* (from the V1 wireframes). Each is two steps with a live preview of the post or email. A photo auto-fills the form: Gemini picks the type, color, brand, urgency, and finds the faces, plates and ID cards to blur; with no AI key, an on-device color guess still helps. Every auto-filled field is tagged and can be undone. |
+| **Three flows, one question** | Laid out from *HackJam Wireframes V2*: a green header with Home, Campus, Report, Found and Mine (a bottom tab bar with a raised camera button on phones). **Snap & report** is four steps: snap, what's wrong (the AI's guess, issue type, "is anyone at risk?"), where (map pin, "already reported nearby, me too?", when you noticed it, who gets it) and an editable email draft. **I lost something** needs no photo: describe it instead, get a Find My tip for phones and earbuds, pick a building from cards, and see who to call first before you post. **I found something** is two steps with a live preview. A photo auto-fills the form: Gemini picks the type, color, brand, urgency, and finds the faces, plates and ID cards to blur; with no AI key, an on-device color guess still helps. Every auto-filled field is tagged and can be undone. |
 | **Anywhere on campus** | Pick one of 24 buildings (libraries, academic buildings, residence halls), or tap the map for outdoor problems. The pin comes from the photo's GPS, the phone's location, or a tap; a pin within 70 m of a building is "in" it, so potholes and parking lots work. |
 | **Routing you can explain** | `src/lib/routing.ts` decides the office from *what* and *where*: parking → Parking & Transportation, safety → USF Police (with a 911 button), roads → Facilities, indoor problems in a dorm → Housing, in a library → that library, everything else → Facilities. Deterministic and tested; AI never routes. |
 | **Duplicate detection** | Same problem type within 40 m? "3 reports of this already, 10 m away. Me too?" One vote per device; voting follows the report, so its updates reach your phone. Votes rank the staff queue, and staff can close a whole cluster in one update. |
 | **Lost ↔ found matching** | Scored on category, color family (navy = blue), place, time and shared distinctive words, with a reason the student can read: *"Same category, color, and building, around the same time; both mention "sticker", "dent"."* |
-| **Closing the loop** | Every report gets a live page (`/r/[id]`) with a status trail. "Mine" lists this phone's reports without an account. A watcher pops a notification when a match appears or staff update a status. |
-| **USF staff console** | `/ops`: open/urgent/median time-to-resolve KPIs, a per-office queue sorted by priority (urgent, then people affected, then age), "fix these first" clusters, and status updates with a note that reaches the student. |
+| **Claim and turn in** | On a match, the owner taps *This is mine: claim it*. The finder is asked to leave it at the right desk, so nobody swaps phone numbers. The owner's proof answer ("what's on it that you can't see in the photo?") is stored as a private event that only the owner and staff can see. Finders mark *I turned it in* with the desk they used and an optional note for the owner. IDs are never posted: `/lost/id` and `/found/id` say exactly who to call or where to take them. |
+| **Closing the loop** | Every report gets a live page (`/r/[id]`) with V2 status steps (e.g. Posted → Turned in → Owner on the way → Picked up). "Mine" lists this phone's reports without an account. A watcher pops a notification when a match appears or staff update a status. |
+| **USF staff console** | `/ops`: overview cards that jump to each part (on phones it is a 4-step pager: Overview, Map, Fix first, Queue), open/urgent/median time-to-resolve KPIs, a per-office queue sorted by priority (urgent, then people affected, then age), "fix these first" clusters, and status updates with a note that reaches the student. |
 | **Installable** | PWA manifest and icons: "Add to Home Screen" and it opens like an app, with shortcuts for Snap and Lost. |
 
 ## How it is built
@@ -167,9 +168,10 @@ five environment variables), then a two-minute smoke test.
 | `src/lib/photo.ts` | Resize, EXIF strip, pixelation |
 | `src/lib/client.ts` | The one API the UI calls (demo mode or server) |
 | `src/lib/offices.ts`, `src/lib/buildings.ts` | Hand-verified USF data with sources |
-| `src/components/ItemFlow.tsx`, `FixFlow.tsx`, `fields.tsx` | Lost/found and problem flows (V1 design) |
+| `src/components/ItemFlow.tsx`, `FixFlow.tsx`, `fields.tsx` | Lost/found and problem flows (V2 design) |
 | `src/lib/autofill.ts` | Photo auto-fill: Gemini, with an on-device color fallback |
-| `src/app/r/[id]`, `src/app/me`, `src/app/ops` | Live report page, My reports, staff console |
+| `src/app/r/[id]` (+ `claim`, `turn-in`), `src/app/me`, `src/app/ops` | Live report page, claim and turn-in screens, Mine, staff console |
+| `src/components/IdHelp.tsx` | "Lost your USF ID?" and "Found an ID or card?" |
 | `supabase/schema.sql` | Tables, constraints, locked-down RLS, buckets |
 | `scripts/eval-photos.ts` | Real-photo AI evaluation |
 | `docs/DEMO.md`, `docs/TEAM.md`, `docs/DEPLOY.md` | 3-minute demo script, who does what, deployment |

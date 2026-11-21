@@ -4,9 +4,9 @@ import { buildingAt } from "./geo";
 import { findMatches, type Match } from "./matching";
 import { OFFICES } from "./offices";
 import { publicView, visibilityFor, withoutToken } from "./privacy";
-import { assignOffice } from "./routing";
+import { assignOffice, foundDropoff } from "./routing";
 import { STATUSES, type IssueType, type Report, type ReportEvent, type Status, type StoredReport } from "./types";
-import { parseNewReport, StatusChangeSchema, ValidationError } from "./validate";
+import { ClaimSchema, parseNewReport, StatusChangeSchema, ValidationError } from "./validate";
 
 /**
  * Business rules, shared by both backends:
@@ -195,6 +195,48 @@ export async function changeStatus(repo: Repo, id: string, input: unknown, actor
   const events = [...r.events, event(status, note || defaultNote(r, status, staff), staff ? "staff" : "reporter", at)];
   await repo.update(id, { status, events, updated_at: at });
   return withoutToken({ ...r, status, events, updated_at: at });
+}
+
+/**
+ * "This is mine: claim it" (V2 claim screen). The owner of a lost report claims a found post that matches it.
+ * - The found post's finder is asked to leave it at the right desk (or told the owner is coming, if it is there already).
+ * - The owner's proof answer ("what's on it that you can't see in the photo") is kept on the lost report as a private
+ *   event: only the owner and USF staff see it, so nobody can copy it to claim someone else's things.
+ */
+export async function claimMatch(repo: Repo, lostId: string, input: unknown, actor: Actor): Promise<{ lost: Report; found: Report; desk: string }> {
+  const parsed = ClaimSchema.safeParse(input);
+  if (!parsed.success) throw new ValidationError(parsed.error.issues[0]?.message ?? "Invalid claim");
+  const { found_id, answer } = parsed.data;
+  const all = await repo.list();
+  const lost = all.find((r) => r.id === lostId);
+  const found = all.find((r) => r.id === found_id);
+  if (!lost || lost.type !== "lost" || !found || found.type !== "found") throw new NotFoundError("Report not found");
+  if (!isOwner(lost, actor) && actor.kind !== "staff") throw new ForbiddenError("Only the person who lost it can claim it.");
+  if (found.visibility === "private" && actor.kind !== "staff") throw new NotFoundError("Report not found");
+  if (lost.status === "resolved" || found.status === "resolved") throw new ValidationError("This one is already closed.");
+  if (!matchesIn(all, lostId, actor).some((m) => m.report.id === found_id)) throw new ValidationError("That found item doesn't match your report.");
+
+  const desk = foundDropoff(OFFICES, found.category, found.building).office.name;
+  const at = new Date().toISOString();
+  const turnedIn = found.status === "routed";
+  const lostEvents: ReportEvent[] = [...lost.events, event("in_progress", "You claimed a matching found item", "reporter", at)];
+  if (answer) lostEvents.push({ ...event("in_progress", `Your proof for the desk: ${answer}`, "reporter", at), private: true });
+  const foundEvents: ReportEvent[] = [
+    ...found.events,
+    event(
+      "in_progress",
+      turnedIn ? "The owner claimed it and will pick it up at the desk" : `The owner claimed it. Please drop it at ${desk}.`,
+      "system",
+      at,
+    ),
+  ];
+  await repo.update(lost.id, { status: "in_progress", events: lostEvents, updated_at: at });
+  await repo.update(found.id, { status: "in_progress", events: foundEvents, updated_at: at });
+  return {
+    lost: withoutToken({ ...lost, status: "in_progress", events: lostEvents, updated_at: at }),
+    found: publicView({ ...found, status: "in_progress", events: foundEvents, updated_at: at }) ?? withoutToken(found),
+    desk,
+  };
 }
 
 function defaultNote(r: StoredReport, s: Status, staff: boolean): string {

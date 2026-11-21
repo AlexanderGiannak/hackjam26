@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { DemoBanner } from "@/components/DemoBanner";
 import { MatchWatcher } from "@/components/MatchWatcher";
-import { SiteHeader } from "@/components/SiteHeader";
+import { SiteBottomNav, SiteHeader } from "@/components/SiteHeader";
 import { APP_NAME } from "@/lib/brand";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "default" },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#ffffff" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#006747" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -24,7 +24,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${inter.variable} antialiased`}>
         <SiteHeader />
         <DemoBanner />
-        <main className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-6 sm:pt-10">{children}</main>
+        <main className="mx-auto max-w-6xl px-4 pb-32 pt-5 sm:px-6 sm:pt-8 lg:pb-20">{children}</main>
+        <SiteBottomNav />
         <MatchWatcher />
       </body>
     </html>

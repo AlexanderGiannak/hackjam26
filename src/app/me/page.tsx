@@ -20,7 +20,7 @@ export default function MinePage() {
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
         <Link href="/" className="link text-[15px]">← Back to home</Link>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">My reports</h1>
+        <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">Mine</h1>
         <p className="text-sm text-neutral-600">Saved on this phone, plus issues you said “me too” to. No account needed.</p>
       </div>
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}

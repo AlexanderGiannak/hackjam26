@@ -88,3 +88,8 @@ export function formText(d: FixDetails) {
     .filter(Boolean)
     .join("\n");
 }
+
+/** mailto: link for a draft the student edited on screen. */
+export function mailHref(to: string, subject: string, body: string) {
+  return `mailto:${encodeURIComponent(to).replace(/%40/g, "@")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}

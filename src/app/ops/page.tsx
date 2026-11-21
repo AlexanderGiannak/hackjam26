@@ -13,6 +13,15 @@ import { ISSUE_ICONS, ISSUE_LABELS, STATUSES, reportTitle, statusLabel, type Rep
 
 const KEY = "bullhorn.ops.v1";
 
+type Tab = "overview" | "map" | "fix" | "queue";
+const TABS: { id: Tab; label: string; title: string; sub: string }[] = [
+  { id: "overview", label: "Overview", title: "Overview", sub: "Tap a card to jump there" },
+  { id: "map", label: "Map", title: "Campus map", sub: "Every open report, colored by type. Filter to one office." },
+  { id: "fix", label: "Fix first", title: "Fix these first", sub: "Same problem within 40 m is merged and ranked by students affected." },
+  { id: "queue", label: "Queue", title: "Queue", sub: "Update a status and the student gets it on their phone." },
+];
+const show = (tab: Tab, id: Tab) => (tab === id ? "" : "hidden lg:block");
+
 export default function OpsPage() {
   const [pass, setPass] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -21,6 +30,8 @@ export default function OpsPage() {
   const [office, setOffice] = useState<string>("all");
   const [kind, setKind] = useState<"open" | "issue" | "items" | "all">("open");
   const [focus, setFocus] = useState<string | null>(null);
+  // phones show one part at a time (V2: Overview -> Map -> Fix first -> Queue); desktop shows them all
+  const [tab, setTab] = useState<Tab>("overview");
 
   useEffect(() => {
     try {
@@ -102,17 +113,35 @@ export default function OpsPage() {
     }
   }
 
+  function jump(t: Tab, k?: typeof kind) {
+    if (k) setKind(k);
+    setTab(t);
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      const target = t === "overview" ? "top" : t === "queue" ? "ops-queue" : "ops-map";
+      document.getElementById(target)?.scrollIntoView({ behavior: "smooth" });
+    } else window.scrollTo({ top: 0 });
+  }
+
   const counts = (id: string) => rows.filter((r) => r.office_id === id && r.status !== "resolved").length;
 
   return (
-    <div className="relative left-1/2 w-screen max-w-6xl -translate-x-1/2 space-y-5 px-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
+    <div className="space-y-6 pb-16 lg:pb-0">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">USF staff console</h1>
-          <p className="text-sm text-neutral-600">Live. Refreshes every 8 seconds. Status changes reach the student&apos;s phone.</p>
+          <p className="text-sm font-semibold text-muted lg:hidden">
+            USF staff console · {TABS.findIndex((t) => t.id === tab) + 1} of 4
+          </p>
+          <h1 className="text-3xl font-extrabold tracking-tight">
+            <span className="hidden lg:inline">USF staff console</span>
+            <span className="lg:hidden">{tab === "overview" ? "USF staff console" : TABS.find((t) => t.id === tab)!.title}</span>
+          </h1>
+          <p className="text-[15px] text-muted">
+            <span className={tab === "overview" ? "" : "hidden lg:inline"}>Live. Refreshes every 8 seconds. Status changes reach the student&apos;s phone.</span>
+            <span className={tab === "overview" ? "hidden" : "lg:hidden"}>{TABS.find((t) => t.id === tab)!.sub}</span>
+          </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/" className="btn-ghost px-3 py-2 text-sm">Student app</Link>
+          <Link href="/" className="btn-ghost hidden px-4 py-2 text-sm lg:inline-flex">Student app</Link>
           <button
             className="btn-ghost px-3 py-2 text-sm"
             onClick={() => {
@@ -127,27 +156,49 @@ export default function OpsPage() {
       </div>
 
       {stats && (
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <Kpi n={stats.open} label="open reports" />
-          <Kpi n={stats.urgent} label="urgent" tone={stats.urgent ? "red" : undefined} />
-          <Kpi n={stats.medianHoursToResolve == null ? "–" : `${Math.round(stats.medianHoursToResolve)} h`} label="median time to resolve" />
-          <Kpi n={stats.resolvedThisWeek} label="resolved this week" />
-          <Kpi n={stats.reunited} label="items reunited" />
+        <section className={show(tab, "overview")}>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-xl font-bold">Overview</h2>
+            <span className="text-sm text-muted">Tap a card to jump there</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <Kpi n={stats.open} label="Open reports" cta="Open queue" onClick={() => jump("queue", "open")} />
+            <Kpi n={stats.urgent} label="Urgent: safety or access" cta="See urgent" tone={stats.urgent ? "red" : undefined} onClick={() => jump("queue", "open")} />
+            <Kpi n={allClusters.length} label="Problems to fix first" cta="Fix these first" onClick={() => jump("fix")} />
+            <Kpi n={rows.filter((r) => r.status !== "resolved" && r.lat != null).length} label="Pins on the campus map" cta="Open map" onClick={() => jump("map")} />
+            <Kpi
+              n={rows.filter((r) => r.type !== "issue").length}
+              label={`Lost & found items, ${stats.reunited} reunited`}
+              cta="Lost & found"
+              onClick={() => jump("queue", "items")}
+            />
+            <Kpi
+              n={stats.medianHoursToResolve == null ? "–" : `${Math.round(stats.medianHoursToResolve)} h`}
+              label={`Median time to resolve, ${stats.resolvedThisWeek} fixed this week`}
+              cta="Everything"
+              onClick={() => jump("queue", "all")}
+            />
+            <Link href="/" className="card flex flex-col justify-between gap-6 transition hover:border-bull lg:hidden">
+              <span className="font-semibold">See what students see</span>
+              <span className="text-sm font-semibold text-bull">Student app →</span>
+            </Link>
+          </div>
         </section>
       )}
 
-      <section className="flex flex-wrap gap-2">
-        <button onClick={() => setOffice("all")} className={`chip ${office === "all" ? "border-bull bg-bull text-white" : "border-neutral-300 bg-white"}`}>
+      <section className={`flex flex-wrap gap-2 ${tab === "map" ? "" : "hidden lg:flex"}`}>
+        <button onClick={() => setOffice("all")} className={`inline-flex items-center gap-1.5 rounded-full border-[1.5px] px-4 py-2 text-sm font-semibold transition ${office === "all" ? "border-bull bg-bull text-white" : "border-line bg-white hover:border-ink/40"}`}>
           All offices
         </button>
         {OFFICES.map((o) => (
-          <button key={o.id} onClick={() => setOffice(o.id)} className={`chip ${office === o.id ? "border-bull bg-bull text-white" : "border-neutral-300 bg-white"}`}>
+          <button key={o.id} onClick={() => setOffice(o.id)} className={`inline-flex items-center gap-1.5 rounded-full border-[1.5px] px-4 py-2 text-sm font-semibold transition ${office === o.id ? "border-bull bg-bull text-white" : "border-line bg-white hover:border-ink/40"}`}>
             {o.short} <span className="tabular-nums opacity-70">{counts(o.id)}</span>
           </button>
         ))}
       </section>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+      <div id="ops-map" className="grid gap-5 lg:grid-cols-[1fr_360px]">
+        <div className={show(tab, "map")}>
         <MapView
           className="h-[420px] w-full"
           zoom={15}
@@ -166,8 +217,9 @@ export default function OpsPage() {
               },
             }))}
         />
-        <section className="card">
-          <h2 className="font-semibold">Fix these first</h2>
+        </div>
+        <section className={`card ${show(tab, "fix")}`}>
+          <h2 className="text-lg font-bold">Fix these first</h2>
           <p className="mb-3 text-xs text-neutral-500">Same problem reported within 40 m, merged. Ranked by students affected.</p>
           <ul className="space-y-3">
             {clusters.map((c) => (
@@ -189,12 +241,12 @@ export default function OpsPage() {
         </section>
       </div>
 
-      <section className="space-y-3">
+      <section id="ops-queue" className={`space-y-3 ${show(tab, "queue")}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Queue ({queue.length})</h2>
+          <h2 className="text-xl font-bold">Queue ({queue.length})</h2>
           <div className="flex gap-1 text-sm">
             {(["open", "issue", "items", "all"] as const).map((k) => (
-              <button key={k} onClick={() => setKind(k)} className={`chip ${kind === k ? "border-bull bg-bull-light text-bull" : "border-neutral-300 bg-white"}`}>
+              <button key={k} onClick={() => setKind(k)} className={`inline-flex items-center gap-1.5 rounded-full border-[1.5px] px-4 py-2 text-sm font-semibold transition ${kind === k ? "border-bull bg-bull text-white" : "border-line bg-white hover:border-ink/40"}`}>
                 {{ open: "Open", issue: "Issues", items: "Lost & found", all: "Everything" }[k]}
               </button>
             ))}
@@ -205,16 +257,34 @@ export default function OpsPage() {
           <QueueRow key={r.id} report={r} focused={r.id === focus} siblings={siblings.get(r.id) ?? []} onUpdate={update} />
         ))}
       </section>
+
+      {tab !== "queue" && (
+        <button type="button" onClick={() => jump(TABS[TABS.findIndex((t) => t.id === tab) + 1].id)} className="link text-bull lg:hidden">
+          Next: {TABS[TABS.findIndex((t) => t.id === tab) + 1].label} →
+        </button>
+      )}
+
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+        {TABS.map((t, i) => (
+          <button key={t.id} type="button" onClick={() => jump(t.id)} className={`flex flex-col items-center gap-1 py-2 text-xs ${tab === t.id ? "font-semibold text-bull" : ""}`}>
+            <span className={`flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] text-xs ${tab === t.id ? "border-bull bg-bull text-white" : "border-ink"}`}>{i + 1}</span>
+            {t.label}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
 
-function Kpi({ n, label, tone }: { n: number | string; label: string; tone?: "red" }) {
+function Kpi({ n, label, cta, tone, onClick }: { n: number | string; label: string; cta: string; tone?: "red"; onClick: () => void }) {
   return (
-    <div className="card">
-      <p className={`text-2xl font-bold tabular-nums ${tone === "red" ? "text-red-600" : "text-bull"}`}>{n}</p>
-      <p className="text-xs text-neutral-500">{label}</p>
-    </div>
+    <button type="button" onClick={onClick} className="card flex flex-col justify-between gap-3 text-left transition hover:border-bull">
+      <span>
+        <span className={`block text-3xl font-extrabold tabular-nums ${tone === "red" ? "text-red-600" : "text-bull"}`}>{n}</span>
+        <span className="mt-1 block text-sm font-medium leading-snug">{label}</span>
+      </span>
+      <span className={`text-sm font-semibold ${tone === "red" ? "text-red-700" : "text-bull"}`}>{cta} →</span>
+    </button>
   );
 }
 

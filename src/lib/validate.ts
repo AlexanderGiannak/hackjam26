@@ -45,6 +45,11 @@ export const StatusChangeSchema = z.object({
   note: text(280).default(""),
 });
 
+export const ClaimSchema = z.object({
+  found_id: z.string().trim().min(1).max(64),
+  answer: text(280).default(""),
+});
+
 export class ValidationError extends Error {
   status = 400;
 }

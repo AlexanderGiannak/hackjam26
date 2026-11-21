@@ -127,6 +127,8 @@ export interface ReportEvent {
   status: Status;
   note: string;
   by: "reporter" | "staff" | "system";
+  /** Only the reporter and USF staff see it (e.g. an owner's proof answer). Stripped by publicView. */
+  private?: boolean;
 }
 
 /** A report as stored server-side. `owner_token` never leaves the server except once, to the reporter. */

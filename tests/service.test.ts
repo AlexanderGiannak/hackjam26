@@ -168,3 +168,36 @@ describe("where a report is", () => {
     expect(report.building).toBe("Cooper Hall");
   });
 });
+
+describe("claimMatch", () => {
+  async function pair() {
+    const repo = new MemoryRepo();
+    const lost = await svc.createReport(repo, input({ type: "lost", category: "bottle", color: "black", building: "Marshall Student Center", description: "Bulls sticker" }), []);
+    const found = await svc.createReport(repo, input({ type: "found", category: "bottle", color: "black", building: "Marshall Student Center" }), ["data:image/jpeg;base64,x"]);
+    return { repo, lost, found };
+  }
+  it("asks the finder to drop it at the right desk and keeps the proof private", async () => {
+    const { repo, lost, found } = await pair();
+    const r = await svc.claimMatch(repo, lost.report.id, { found_id: found.report.id, answer: "Green sticker on the bottom" }, owner(lost.token));
+    expect(r.desk).toBe("MSC Information Desk");
+    expect(r.lost.status).toBe("in_progress");
+    expect(r.found.events.at(-1)?.note).toMatch(/drop it at MSC Information Desk/);
+    // the owner and staff see the proof, other students never do
+    const mine = await svc.getReport(repo, lost.report.id, owner(lost.token));
+    expect(mine.report.events.some((e) => e.private && e.note.includes("Green sticker"))).toBe(true);
+    const pub = await svc.getReport(repo, lost.report.id, anyone);
+    expect(JSON.stringify(pub.report)).not.toContain("Green sticker");
+    const st = await svc.getReport(repo, lost.report.id, staff);
+    expect(JSON.stringify(st.report)).toContain("Green sticker");
+  });
+  it("only lets the owner of the lost report claim", async () => {
+    const { repo, lost, found } = await pair();
+    await expect(svc.claimMatch(repo, lost.report.id, { found_id: found.report.id }, anyone)).rejects.toThrow(/Only the person/);
+    await expect(svc.claimMatch(repo, lost.report.id, { found_id: found.report.id }, owner(found.token))).rejects.toThrow(/Only the person/);
+  });
+  it("refuses a found post that doesn't match", async () => {
+    const { repo, lost } = await pair();
+    const other = await svc.createReport(repo, input({ type: "found", category: "laptop", color: "silver", building: "Cooper Hall" }), ["data:image/jpeg;base64,x"]);
+    await expect(svc.claimMatch(repo, lost.report.id, { found_id: other.report.id }, owner(lost.token))).rejects.toThrow(/doesn't match/);
+  });
+});

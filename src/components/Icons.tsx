@@ -47,3 +47,33 @@ export const LinkIcon = ({ className = "h-4 w-4" }: P) => (
 export const SparkIcon = ({ className = "h-4 w-4" }: P) => (
   <svg {...base} className={className} aria-hidden><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6" /></svg>
 );
+export const HomeIcon = ({ className = "h-6 w-6" }: P) => (
+  <svg {...base} className={className} aria-hidden><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z" /></svg>
+);
+export const MapIcon = ({ className = "h-6 w-6" }: P) => (
+  <svg {...base} className={className} aria-hidden><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z" /><path d="M9 3v15M15 6v15" /></svg>
+);
+export const CameraIcon = ({ className = "h-6 w-6" }: P) => (
+  <svg {...base} className={className} aria-hidden><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" /><circle cx="12" cy="13.5" r="3.5" /></svg>
+);
+export const TrayIcon = ({ className = "h-6 w-6" }: P) => (
+  <svg {...base} className={className} aria-hidden><rect x="3" y="5" width="18" height="15" rx="2" /><path d="M3 10h18M9 14h6M12 10v4" /></svg>
+);
+export const DocIcon = ({ className = "h-6 w-6" }: P) => (
+  <svg {...base} className={className} aria-hidden><path d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" /><path d="M9 11h6M9 15h6M9 7h3" /></svg>
+);
+export const TargetIcon = ({ className = "h-5 w-5" }: P) => (
+  <svg {...base} className={className} aria-hidden><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></svg>
+);
+export const MailIcon = ({ className = "h-5 w-5" }: P) => (
+  <svg {...base} className={className} aria-hidden><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
+);
+export const BulbIcon = ({ className = "h-5 w-5" }: P) => (
+  <svg {...base} className={className} aria-hidden><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z" /></svg>
+);
+export const ThumbIcon = ({ className = "h-4 w-4" }: P) => (
+  <svg {...base} className={className} aria-hidden><path d="M7 10v11H4V10Zm0 0 4-7a2 2 0 0 1 3 2l-1 5h6a2 2 0 0 1 2 2.3l-1.3 7A2 2 0 0 1 17.7 21H7" /></svg>
+);
+export const XIcon = ({ className = "h-5 w-5" }: P) => (
+  <svg {...base} className={className} aria-hidden><path d="M6 6l12 12M18 6 6 18" /></svg>
+);

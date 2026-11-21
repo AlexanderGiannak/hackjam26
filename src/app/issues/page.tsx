@@ -49,7 +49,7 @@ export default function IssuesPage() {
       <div className="flex items-end justify-between gap-3">
         <div>
           <Link href="/" className="link text-[15px]">← Back to home</Link>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Campus issues</h1>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">Campus issues</h1>
           <p className="mt-1.5 text-muted">
             {rows ? `${open.length} open · ${people} students affected · ${fixed} fixed` : "Loading…"}. Parking reports are private and not shown.
           </p>

@@ -27,9 +27,11 @@ export function withoutToken(r: StoredReport): Report {
 export function publicView(r: StoredReport | Report): Report | null {
   const base = "owner_token" in r ? withoutToken(r as StoredReport) : (r as Report);
   if (base.visibility === "private") return null;
-  if (base.type === "issue") return base;
+  const events = base.events.filter((e) => !e.private);
+  if (base.type === "issue") return { ...base, events };
   return {
     ...base,
+    events,
     description: base.type === "lost" ? "" : base.description,
     tags: base.type === "lost" ? [] : base.tags,
     lat: roundCoord(base.lat),

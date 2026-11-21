@@ -51,7 +51,14 @@ function Browse() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link href="/" className="link text-[15px]">← Back to home</Link>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Browse {tab} items</h1>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">{tab === "found" ? "Found items" : "Lost items"}</h1>
+          <p className="text-[15px] text-muted">
+            {tab === "found" ? (
+              <>Waiting for their owners. Found something yourself? <Link href="/found" className="link text-ink">Post it</Link>.</>
+            ) : (
+              <>Things students are looking for. Lost something? <Link href="/lost" className="link text-ink">Tell us</Link>.</>
+            )}
+          </p>
         </div>
         <div className="flex rounded-full border border-line bg-white p-1 text-sm font-semibold">
           {(["lost", "found"] as const).map((t) => (
