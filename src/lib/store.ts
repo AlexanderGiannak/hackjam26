@@ -1,5 +1,6 @@
 "use client";
 
+import { canonicalBuildingName } from "./buildings";
 import { OFFICES } from "./offices";
 import { seedReports } from "./seed";
 import { PHOTO_BUCKET, supabase } from "./supabase";
@@ -13,10 +14,16 @@ export const isLocalMode = !supabase;
 
 const LS_KEY = "campus-helper.reports.v1";
 
+/** Rewrites renamed building names on reports saved before the rename. */
+function normalize(r: Report): Report {
+  const building = canonicalBuildingName(r.building);
+  return building === r.building ? r : { ...r, building };
+}
+
 function readLocal(): Report[] {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (raw) return JSON.parse(raw) as Report[];
+    if (raw) return (JSON.parse(raw) as Report[]).map(normalize);
   } catch {}
   const seeded = seedReports();
   writeLocal(seeded);
@@ -51,7 +58,7 @@ export async function listReports(type?: Report["type"]): Promise<Report[]> {
     if (type) q = q.eq("type", type);
     const { data, error } = await q;
     if (error) throw error;
-    return data as Report[];
+    return (data as Report[]).map(normalize);
   }
   const rows = readLocal().sort((a, b) => b.created_at.localeCompare(a.created_at));
   return type ? rows.filter((r) => r.type === type) : rows;
@@ -60,7 +67,7 @@ export async function listReports(type?: Report["type"]): Promise<Report[]> {
 export async function getReport(id: string): Promise<Report | null> {
   if (supabase) {
     const { data } = await supabase.from("reports_with_counts").select("*").eq("id", id).maybeSingle();
-    return (data as Report) ?? null;
+    return data ? normalize(data as Report) : null;
   }
   return readLocal().find((r) => r.id === id) ?? null;
 }

@@ -34,9 +34,21 @@ export const BUILDINGS: Building[] = [
   { code: "AND", name: "Castor / Andros Complex", kind: "dorm", lat: 28.0639, lng: -82.4111 },
 ];
 
+/** Old building names/codes that reports may still be saved under, mapped to the current name. */
+const RENAMED: Record<string, string> = {
+  "Communication & Media Studies": "Communication and Information Sciences",
+  CMC: "Communication and Information Sciences",
+};
+
+/** Current building name for a stored value, so old reports still filter, match, and route. */
+export function canonicalBuildingName<T extends string | null | undefined>(name: T): T | string {
+  return name && Object.hasOwn(RENAMED, name) ? RENAMED[name] : name;
+}
+
 export function findBuilding(name: string | null | undefined): Building | undefined {
-  if (!name) return undefined;
-  return BUILDINGS.find((b) => b.name === name || b.code === name);
+  const n = canonicalBuildingName(name);
+  if (!n) return undefined;
+  return BUILDINGS.find((b) => b.name === n || b.code === n);
 }
 
 /** Nearest building to a GPS point, or undefined if farther than maxMeters (i.e. probably off campus). */
