@@ -136,6 +136,8 @@ export interface StoredReport {
   id: string;
   type: ReportType;
   category: Category | null;
+  /** what the item is, in the student's words, when category is "other" (e.g. "umbrella") */
+  item_name?: string | null;
   color: string | null;
   brand: string | null;
   description: string;
@@ -169,6 +171,7 @@ export type Report = Omit<StoredReport, "owner_token">;
 export interface NewReport {
   type: ReportType;
   category: Category | null;
+  item_name?: string | null;
   color: string | null;
   brand: string | null;
   description: string;
@@ -215,9 +218,9 @@ export function statusLabel(type: ReportType, s: Status): string {
   return { open: "Waiting for owner", routed: "Turned in", in_progress: "Claim in progress", resolved: "Returned" }[s];
 }
 
-export function reportTitle(r: Pick<Report, "type" | "issue_type" | "color" | "brand" | "category">): string {
+export function reportTitle(r: Pick<Report, "type" | "issue_type" | "color" | "brand" | "category" | "item_name">): string {
   if (r.type === "issue") return ISSUE_LABELS[r.issue_type ?? "other"];
-  return itemTitle({ color: r.color, brand: r.brand, category: r.category ?? "other" });
+  return itemTitle({ color: r.color, brand: r.brand, category: r.category ?? "other", item_name: r.item_name });
 }
 
 export function reportIcon(r: Pick<Report, "type" | "issue_type" | "category">): string {
@@ -225,9 +228,10 @@ export function reportIcon(r: Pick<Report, "type" | "issue_type" | "category">):
 }
 
 /** "Black Hydro Flask water bottle" (from the V1 design). */
-export function itemTitle(r: { color: string | null; category: Category | null; brand?: string | null }) {
+export function itemTitle(r: { color: string | null; category: Category | null; brand?: string | null; item_name?: string | null }) {
   if (!r.category) return "";
-  const label = CATEGORY_LABELS[r.category].toLowerCase().replace("airpods / earbuds", "earbuds");
+  const named = r.category === "other" && r.item_name?.trim();
+  const label = named ? named.toLowerCase() : CATEGORY_LABELS[r.category].toLowerCase().replace("airpods / earbuds", "earbuds");
   const t = [r.color, r.brand, label].filter(Boolean).join(" ");
   return t.charAt(0).toUpperCase() + t.slice(1);
 }

@@ -9,6 +9,8 @@ export type AutofillMode = "item" | "broken";
 
 export interface AutoResult {
   category?: Category;
+  /** short name of the item when category is "other" (from the AI's title, e.g. "umbrella") */
+  item_name?: string;
   color?: string;
   brand?: string;
   description?: string;
@@ -114,6 +116,7 @@ export async function analyzePhoto(file: File, mode: AutofillMode): Promise<Auto
       const out: AutoResult = { source: "ai", sensitive: a.sensitive, kind: a.kind };
       if (mode === "item") {
         if (a.category) out.category = a.category;
+        if (a.category === "other" && a.title) out.item_name = a.title.trim().slice(0, 40);
         if (a.category === "id_card") out.is_id_card = true;
         out.color = normalizeColor(a.color) ?? localColor;
         if (a.brand && a.brand.toLowerCase() !== "null") out.brand = a.brand;

@@ -19,6 +19,7 @@ create table public.reports (
   id           text primary key,
   type         text not null check (type in ('lost','found','issue')),
   category     text check (category in ('phone','earbuds','laptop','tablet','wallet','keys','id_card','bottle','bag','jacket','textbook','other')),
+  item_name    text check (char_length(item_name) <= 40), -- what the item is when category = 'other' (e.g. "umbrella")
   color        text check (char_length(color) <= 40),
   brand        text check (char_length(brand) <= 60),
   description  text not null default '' check (char_length(description) <= 500),

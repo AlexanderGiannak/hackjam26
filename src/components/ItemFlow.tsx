@@ -59,6 +59,7 @@ export function ItemFlow({ type }: { type: Kind }) {
 
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [category, setCategory] = useState<Category | "">("");
+  const [itemName, setItemName] = useState("");
   const [color, setColor] = useState("");
   const [brand, setBrand] = useState("");
   const [building, setBuilding] = useState("");
@@ -97,6 +98,7 @@ export function ItemFlow({ type }: { type: Kind }) {
       if (r.category) {
         touched.current.add("category");
         setCategory(r.category);
+        if (r.category === "other" && r.item_name) setItemName(r.item_name);
       }
       if (r.color) {
         touched.current.add("color");
@@ -119,6 +121,7 @@ export function ItemFlow({ type }: { type: Kind }) {
       id: "draft",
       type,
       category: category || null,
+      item_name: category === "other" ? itemName.trim() || null : null,
       color: color || null,
       brand: brand.trim() || null,
       description: details.trim(),
@@ -140,7 +143,7 @@ export function ItemFlow({ type }: { type: Kind }) {
       created_at: now,
       updated_at: now,
     };
-  }, [type, category, color, brand, details, tags, building, gps, lost, when]);
+  }, [type, category, itemName, color, brand, details, tags, building, gps, lost, when]);
 
   const liveMatches = useMemo(
     () => (!lost && category && building ? findMatches(draftReport, candidates) : []),
@@ -206,6 +209,7 @@ export function ItemFlow({ type }: { type: Kind }) {
       } else setGpsNote("Photo has GPS, but it's not near a campus building.");
     }
     put("category", r.category, (v) => setCategory(v as Category));
+    if (r.category === "other" && r.item_name && !touched.current.has("category")) setItemName((n) => n || r.item_name!);
     put("color", r.color, setColor);
     put("brand", r.brand, setBrand);
     put("details", r.description, setDetails);
@@ -236,6 +240,7 @@ export function ItemFlow({ type }: { type: Kind }) {
   function validate(): string | null {
     if (!lost && photos.length === 0) return "Add a photo so the owner can recognize it.";
     if (!category) return "Pick what the item is.";
+    if (category === "other" && !itemName.trim()) return "Type what the item is (e.g. umbrella, calculator).";
     if (!building) return lost ? "Pick where you think you lost it." : "Pick where you found it.";
     return null;
   }
@@ -265,6 +270,7 @@ export function ItemFlow({ type }: { type: Kind }) {
         {
           type,
           category: d.category,
+          item_name: d.item_name,
           color: d.color,
           brand: d.brand,
           description: d.description,
@@ -287,7 +293,7 @@ export function ItemFlow({ type }: { type: Kind }) {
   }
 
   const title = lost ? "I lost something" : "I found something";
-  const previewTitle = itemTitle({ color: color || null, category: category || null, brand: brand.trim() || null });
+  const previewTitle = itemTitle({ color: color || null, category: category || null, brand: brand.trim() || null, item_name: itemName });
 
   return (
     <div>
@@ -380,6 +386,23 @@ export function ItemFlow({ type }: { type: Kind }) {
               onChange={editCategory}
               auto={autoFields.has("category")}
             />
+
+            {category === "other" && (
+              <div>
+                <label className="label" htmlFor="item-name">
+                  What is it exactly?
+                </label>
+                <input
+                  id="item-name"
+                  className="field-soft"
+                  value={itemName}
+                  maxLength={40}
+                  autoFocus={!itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  placeholder="e.g. umbrella, calculator, sunglasses"
+                />
+              </div>
+            )}
 
             {isId && (
               <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-[15px] text-amber-900">

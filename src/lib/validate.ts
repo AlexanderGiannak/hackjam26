@@ -9,6 +9,7 @@ export const NewReportSchema = z
   .object({
     type: z.enum(["lost", "found", "issue"]),
     category: z.enum(ITEM_CATEGORIES).nullable().default(null),
+    item_name: text(40).nullable().default(null).transform((v) => v || null),
     color: text(40).nullable().default(null).transform((v) => (v ? v.toLowerCase() : null)),
     brand: text(60).nullable().default(null).transform((v) => v || null),
     description: text(500).default(""),
@@ -34,6 +35,7 @@ export const NewReportSchema = z
   .transform((r): NewReport => ({
     ...r,
     category: r.type === "issue" ? null : r.category,
+    item_name: r.type !== "issue" && r.category === "other" ? r.item_name : null,
     color: r.type === "issue" ? null : r.color,
     brand: r.type === "issue" ? null : r.brand,
     issue_type: r.type === "issue" ? r.issue_type : null,
