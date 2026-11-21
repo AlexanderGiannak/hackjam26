@@ -117,9 +117,13 @@ function ReportPage() {
           </div>
         </div>
       </header>
-      {report.photo_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={report.photo_url} alt="" className="max-h-80 w-full rounded-2xl object-cover" />
+      {(report.photo_urls?.length ? report.photo_urls : report.photo_url ? [report.photo_url] : []).length > 0 && (
+        <div className={`grid gap-2 ${report.photo_urls?.length > 1 ? "grid-cols-3" : "grid-cols-1"}`}>
+          {(report.photo_urls?.length ? report.photo_urls : [report.photo_url!]).map((u, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={u} src={u} alt={`Photo ${i + 1}`} className={`w-full rounded-2xl object-cover ${report.photo_urls?.length > 1 ? "aspect-square" : "max-h-80"}`} />
+          ))}
+        </div>
       )}
       {report.description && <p className="text-neutral-800">{report.description}</p>}
 

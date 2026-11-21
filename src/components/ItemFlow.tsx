@@ -114,8 +114,9 @@ export function ItemFlow({ type }: { type: Kind }) {
       photo_urls: [],
       building: building || null,
       spot: null,
-      lat: gps?.lat ?? b?.lat ?? null,
-      lng: gps?.lng ?? b?.lng ?? null,
+      // Photo GPS only while it agrees with the chosen building; if the student picks another building, use that one.
+      lat: (gps && b && nearestBuilding(gps.lat, gps.lng)?.code === b.code ? gps.lat : b?.lat) ?? null,
+      lng: (gps && b && nearestBuilding(gps.lat, gps.lng)?.code === b.code ? gps.lng : b?.lng) ?? null,
       issue_type: null,
       severity: "normal",
       status: "open",
@@ -160,7 +161,8 @@ export function ItemFlow({ type }: { type: Kind }) {
       setAuto({ state: "idle" });
       return;
     }
-    if (isNewFirst) autofill(next[0].file);
+    // Don't send a photo of an ID card to the AI once the student has said it's an ID.
+    if (isNewFirst && category !== "id_card") autofill(next[0].file);
   }
 
   /** Runs as soon as a photo is added: GPS -> building, Gemini (or on-device color) -> the rest. */
@@ -215,7 +217,8 @@ export function ItemFlow({ type }: { type: Kind }) {
   }
 
   function validate(): string | null {
-    if (!lost && photos.length === 0) return "Add a photo so the owner can recognize it.";
+    // A found ID needs no photo: it is never posted, and its photo is never uploaded.
+    if (!lost && photos.length === 0 && !isId) return "Add a photo so the owner can recognize it.";
     if (!category) return "Pick what the item is.";
     if (!building) return lost ? "Pick where you think you lost it." : "Pick where you found it.";
     return null;
@@ -318,8 +321,8 @@ export function ItemFlow({ type }: { type: Kind }) {
 
             {!lost && isId && (
               <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-[15px] text-amber-900">
-                <strong>ID cards aren&apos;t posted publicly.</strong> We&apos;ll just show you where to take it so the owner&apos;s
-                information stays private.
+                <strong>ID cards aren&apos;t posted publicly, and no photo is needed.</strong> If you took one, it stays on your phone.
+                We&apos;ll route it privately to the Card Center and show you where to take it.
               </div>
             )}
 
