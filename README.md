@@ -51,7 +51,10 @@ Import the GitHub repo in Vercel, add env vars from `.env.example`, deploy. Push
 ## Before the demo (team TODO)
 
 - [x] Office phone numbers sourced from official USF pages (2026-11-21, source URLs in `src/lib/offices.ts`).
-- [ ] Confirm hours for the Tampa and Shimberg library desks, then set `verified = true` on those rows.
+- [x] Library hours for Tampa and Shimberg from USF LibCal (regular Fall 2026 week, closed Thanksgiving Thu-Fri,
+      not modeled). All 6 offices are now `verified = true`. Change `src/lib/offices.ts` and `supabase/schema.sql` together.
+- [x] Next.js upgraded past CVE-2025-66478 (15.5.29).
+- [ ] Create the Vercel and Supabase projects (needs a team account, see sections above).
 - [ ] Confirm building names/coordinates in `src/lib/buildings.ts` against the USF campus map.
 - [ ] Set `NEXT_PUBLIC_TEST_EMAIL` to a teammate. Leave `NEXT_PUBLIC_USE_REAL_FACILITIES_EMAIL=false` until USF says OK.
 - [ ] Add `GEMINI_API_KEY` in Vercel, run "Fill in from photo" on the demo photos once so results are cached.
