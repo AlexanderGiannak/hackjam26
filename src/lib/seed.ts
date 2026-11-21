@@ -1,0 +1,61 @@
+import type { Report } from "./types";
+
+const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+
+/** Demo rows used in local mode (mirrors the seed in supabase/schema.sql). */
+export function seedReports(): Report[] {
+  const base = { brand: null, photo_url: null, lat: null, lng: null, issue_type: null, user_id: null };
+  return [
+    {
+      ...base,
+      id: "seed-found-phone",
+      type: "found",
+      category: "phone",
+      color: "black",
+      brand: "iPhone",
+      description: "Black iPhone in a clear case, found on a study table on the 2nd floor.",
+      building: "Tampa Campus Library",
+      status: "open",
+      occurred_at: hoursAgo(3),
+      created_at: hoursAgo(3),
+    },
+    {
+      ...base,
+      id: "seed-lost-bottle",
+      type: "lost",
+      category: "bottle",
+      color: "black",
+      description: "Black insulated water bottle with a USF Bulls sticker.",
+      building: "Marshall Student Center",
+      status: "open",
+      occurred_at: hoursAgo(20),
+      created_at: hoursAgo(20),
+    },
+    {
+      ...base,
+      id: "seed-found-keys",
+      type: "found",
+      category: "keys",
+      color: "silver",
+      description: "Two keys on a green lanyard.",
+      building: "Muma College of Business",
+      status: "open",
+      occurred_at: hoursAgo(30),
+      created_at: hoursAgo(30),
+    },
+    {
+      ...base,
+      id: "seed-broken-light",
+      type: "broken",
+      category: null,
+      color: null,
+      issue_type: "lighting",
+      description: "Hallway light flickering outside room 120.",
+      building: "Cooper Hall",
+      status: "reported",
+      occurred_at: hoursAgo(48),
+      created_at: hoursAgo(48),
+      me_too_count: 3,
+    },
+  ];
+}

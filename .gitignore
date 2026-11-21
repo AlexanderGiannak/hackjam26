@@ -1,0 +1,22 @@
+# deps
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+
+# next
+/.next/
+/out/
+/build
+next-env.d.ts
+*.tsbuildinfo
+
+# env (secrets live in Vercel, never in git)
+.env
+.env*.local
+.vercel
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*

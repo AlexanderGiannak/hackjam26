@@ -1,0 +1,91 @@
+import type { Office } from "./types";
+
+/**
+ * Seed copy of the `offices` table (also in supabase/schema.sql).
+ * The app reads from Supabase when configured and falls back to this list.
+ *
+ * IMPORTANT: every row starts verified=false. A teammate must check each phone, email,
+ * URL, and hours value against an official USF page, fill in the nulls, then set verified=true.
+ * The UI shows an "unverified" tag until then. Do not guess contact details.
+ */
+export const OFFICES: Office[] = [
+  {
+    id: "upd",
+    name: "USF Police (Lost & Found)",
+    handles: "Lost and found property, especially valuables like phones, wallets, and laptops.",
+    categories: ["phone", "wallet", "laptop", "keys", "bag", "valuables", "other"],
+    hours: null,
+    always_open: true,
+    phone: "813-974-2628",
+    email: null,
+    url: "https://www.usf.edu/administrative-services/university-police/",
+    location: "4002 E Fowler Ave (USF Police building)",
+    sort_order: 1,
+    verified: false,
+  },
+  {
+    id: "card",
+    name: "USF Card Center",
+    handles: "Lost or found USF ID cards. Found IDs should go here, not on a public list.",
+    categories: ["id_card"],
+    hours: [{ days: [1, 2, 3, 4, 5], open: "08:00", close: "17:00" }],
+    phone: null,
+    email: null,
+    url: null,
+    location: null,
+    sort_order: 2,
+    verified: false,
+  },
+  {
+    id: "lib-tampa",
+    name: "Tampa Campus Library Service Desk",
+    handles: "Items left in the Tampa Campus Library, and library building issues.",
+    categories: ["library"],
+    hours: null,
+    phone: null,
+    email: null,
+    url: "https://www.usf.edu/library/",
+    location: "Tampa Campus Library, 1st floor",
+    sort_order: 3,
+    verified: false,
+  },
+  {
+    id: "lib-shimberg",
+    name: "Shimberg Health Sciences Library Desk",
+    handles: "Items left in the Shimberg Health Sciences Library, and library building issues.",
+    categories: ["library"],
+    hours: null,
+    phone: null,
+    email: null,
+    url: null,
+    location: "Shimberg Health Sciences Library",
+    sort_order: 4,
+    verified: false,
+  },
+  {
+    id: "facilities",
+    name: "Facilities Service Center",
+    handles: "Broken lights, doors, fountains, and furniture in non-residential buildings.",
+    categories: ["facilities", "lighting", "fountain", "door", "furniture", "other"],
+    hours: [{ days: [1, 2, 3, 4, 5], open: "08:00", close: "17:00" }],
+    phone: null,
+    email: "FM-ServiceCenter@usf.edu",
+    url: null,
+    location: null,
+    sort_order: 5,
+    verified: false,
+  },
+  {
+    id: "housing",
+    name: "Housing & Residential Education Maintenance",
+    handles: "Maintenance problems in residence halls. Submit through the housing maintenance system.",
+    categories: ["housing"],
+    hours: null,
+    phone: null,
+    email: null,
+    url: "https://www.usf.edu/housing/",
+    location: null,
+    sort_order: 6,
+    verified: false,
+  },
+];
