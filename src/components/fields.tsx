@@ -248,7 +248,20 @@ const KIND_BLURB: Record<Building["kind"], string> = {
 export const buildingBlurb = (b: Building) => BLURBS[b.code] ?? KIND_BLURB[b.kind];
 
 /** Stand-in for a building photo (V2 shows "Photo of building"): the building code on a tinted tile. */
+/** Buildings with a photo in public/buildings (sources in public/buildings/SOURCES.md). */
+const PHOTOS = new Set(["BEA", "BET", "CAS", "CYP", "END", "HOR", "JUN", "MAP", "PIN", "POP", "SUM", "HOL", "KOS"]);
+
 function BuildingTile({ b, small }: { b: Building; small?: boolean }) {
+  if (PHOTOS.has(b.code))
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={`/buildings/${b.code}.jpg`}
+        alt=""
+        loading="lazy"
+        className={`shrink-0 rounded-lg object-cover ${small ? "h-8 w-10" : "aspect-[4/3] w-full"}`}
+      />
+    );
   const tint = { library: "#e6f1ec", student_life: "#f4f1e3", academic: "#eceae4", dorm: "#e9eef6" }[b.kind];
   return (
     <span
