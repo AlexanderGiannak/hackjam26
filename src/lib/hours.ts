@@ -21,11 +21,16 @@ export function isOpenNow(office: Office, now = new Date()): boolean | null {
   const local = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
   const day = local.getDay();
   const mins = local.getHours() * 60 + local.getMinutes();
+  const prevDay = (day + 6) % 7;
   return office.hours.some((r) => {
-    if (!r.days.includes(day)) return false;
-    if (mins < toMin(r.open) || mins >= toMin(r.close)) return false;
+    const open = toMin(r.open);
+    const close = toMin(r.close);
     if (r.lunch && mins >= toMin(r.lunch.start) && mins < toMin(r.lunch.end)) return false;
-    return true;
+    // Overnight window, e.g. 07:00-02:00: open from `open` until midnight, then until `close` the next morning.
+    if (close <= open) {
+      return (r.days.includes(day) && mins >= open) || (r.days.includes(prevDay) && mins < close);
+    }
+    return r.days.includes(day) && mins >= open && mins < close;
   });
 }
 

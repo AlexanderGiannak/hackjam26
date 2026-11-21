@@ -98,7 +98,10 @@ export type NewReport = Omit<Report, "id" | "created_at" | "user_id" | "status" 
   status?: Report["status"];
 };
 
-/** One opening window. days uses JS getDay(): 0 = Sunday ... 6 = Saturday. */
+/**
+ * One opening window. days uses JS getDay(): 0 = Sunday ... 6 = Saturday.
+ * If close <= open the window runs past midnight (e.g. 07:00-02:00 closes at 2am the next day).
+ */
 export interface HoursRule {
   days: number[];
   open: string; // "08:00"
