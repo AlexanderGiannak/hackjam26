@@ -7,7 +7,7 @@ import { CATEGORIES, COLORS, ISSUE_TYPES } from "@/lib/types";
  */
 export const runtime = "nodejs";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
 
 export async function GET() {
   return NextResponse.json({ enabled: !!process.env.GEMINI_API_KEY });
