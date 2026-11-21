@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { ItemCard } from "@/components/ItemCard";
-import { BUILDING_GROUPS, BUILDINGS } from "@/lib/buildings";
-import { listReports } from "@/lib/store";
+import { BUILDING_GROUPS, BUILDINGS, canonicalBuildingName } from "@/lib/buildings";
+import { listReports } from "@/lib/client";
 import { CATEGORIES, CATEGORY_LABELS, type Report } from "@/lib/types";
 
 export default function BrowsePage() {
@@ -29,7 +29,7 @@ function Browse() {
   useEffect(() => {
     setRows(null);
     listReports(tab)
-      .then((r) => setRows(r.filter((x) => x.status !== "closed")))
+      .then((r) => setRows(r.filter((x) => x.status !== "resolved")))
       .catch((e) => setError(e.message));
   }, [tab]);
 
@@ -38,8 +38,8 @@ function Browse() {
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
     return rows.filter((r) => {
       if (cat && r.category !== cat) return false;
-      if (bld && r.building !== bld) return false;
-      const hay = [r.description, r.color, r.brand, r.building, r.spot, r.category && CATEGORY_LABELS[r.category]]
+      if (bld && canonicalBuildingName(r.building) !== bld) return false;
+      const hay = [r.description, r.color, r.brand, r.building, r.spot, ...r.tags, r.category && CATEGORY_LABELS[r.category]]
         .join(" ")
         .toLowerCase();
       return terms.every((t) => hay.includes(t));
@@ -51,7 +51,14 @@ function Browse() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link href="/" className="link text-[15px]">← Back to home</Link>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Browse {tab} items</h1>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">{tab === "found" ? "Found items" : "Lost items"}</h1>
+          <p className="text-[15px] text-muted">
+            {tab === "found" ? (
+              <>Waiting for their owners. Found something yourself? <Link href="/found" className="link text-ink">Post it</Link>.</>
+            ) : (
+              <>Things students are looking for. Lost something? <Link href="/lost" className="link text-ink">Tell us</Link>.</>
+            )}
+          </p>
         </div>
         <div className="flex rounded-full border border-line bg-white p-1 text-sm font-semibold">
           {(["lost", "found"] as const).map((t) => (
@@ -88,6 +95,9 @@ function Browse() {
 
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {!rows && !error && <p className="text-muted">Loading...</p>}
+      {tab === "lost" && (
+        <p className="text-sm text-muted">🔒 What makes a lost item unique stays private: it&apos;s how the office checks the real owner.</p>
+      )}
       {rows && filtered.length === 0 && (
         <p className="rounded-2xl border border-dashed border-line bg-white p-5 text-muted">Nothing matches. Try fewer words.</p>
       )}

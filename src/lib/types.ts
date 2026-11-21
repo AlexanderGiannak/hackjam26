@@ -1,20 +1,16 @@
-export type ReportType = "lost" | "found" | "broken";
+/**
+ * Bullhorn data model.
+ *
+ * One `Report` covers everything a student can snap on campus:
+ * - `lost` / `found`: personal items, matched against each other.
+ * - `issue`: anything broken or wrong on campus (indoors, roads, parking, safety), routed to the USF office that owns it.
+ */
+export type ReportType = "lost" | "found" | "issue";
 
-export const CATEGORIES = [
-  "phone",
-  "earbuds",
-  "laptop",
-  "tablet",
-  "wallet",
-  "keys",
-  "id_card",
-  "bottle",
-  "bag",
-  "jacket",
-  "textbook",
-  "other",
-] as const;
-export type Category = (typeof CATEGORIES)[number];
+export const ITEM_CATEGORIES = ["phone", "earbuds", "laptop", "tablet", "wallet", "keys", "id_card", "bottle", "bag", "jacket", "textbook", "other"] as const;
+export type Category = (typeof ITEM_CATEGORIES)[number];
+/** Kept for older imports. */
+export const CATEGORIES = ITEM_CATEGORIES;
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   phone: "Phone",
@@ -31,18 +27,65 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   other: "Other",
 };
 
-export const ISSUE_TYPES = ["lighting", "fountain", "door", "furniture", "restroom", "ac", "elevator", "other"] as const;
+export const CATEGORY_ICONS: Record<Category, string> = {
+  phone: "📱",
+  earbuds: "🎧",
+  laptop: "💻",
+  tablet: "📲",
+  wallet: "👛",
+  keys: "🔑",
+  id_card: "🪪",
+  bottle: "🧴",
+  bag: "🎒",
+  jacket: "🧥",
+  textbook: "📚",
+  other: "📦",
+};
+
+export const ISSUE_TYPES = [
+  "lighting",
+  "water",
+  "ac",
+  "door",
+  "elevator",
+  "furniture",
+  "restroom",
+  "trash",
+  "road",
+  "parking",
+  "safety",
+  "other",
+] as const;
 export type IssueType = (typeof ISSUE_TYPES)[number];
 
 export const ISSUE_LABELS: Record<IssueType, string> = {
-  lighting: "Lighting",
-  fountain: "Water fountain",
-  door: "Door",
-  furniture: "Furniture",
-  restroom: "Restroom",
+  lighting: "Lighting out",
+  water: "Leak / fountain",
   ac: "AC / temperature",
-  elevator: "Elevator",
-  other: "Other",
+  door: "Door or lock",
+  elevator: "Elevator / ramp (accessibility)",
+  furniture: "Broken furniture",
+  restroom: "Restroom problem",
+  trash: "Trash / spill",
+  road: "Pothole / sidewalk",
+  parking: "Bad parking",
+  safety: "Safety hazard",
+  other: "Something else",
+};
+
+export const ISSUE_ICONS: Record<IssueType, string> = {
+  lighting: "💡",
+  water: "🚰",
+  ac: "🌡️",
+  door: "🚪",
+  elevator: "♿",
+  furniture: "🪑",
+  restroom: "🚻",
+  trash: "🗑️",
+  road: "🚧",
+  parking: "🚗",
+  safety: "⚠️",
+  other: "🛠️",
 };
 
 /** Swatches shown in the color picker (order matches the V1 wireframes). */
@@ -67,41 +110,80 @@ export function colorHex(name: string | null | undefined): string | null {
   return COLOR_SWATCHES.find((c) => c.name === name.toLowerCase())?.hex ?? null;
 }
 
-export type LostFoundStatus = "open" | "matched" | "closed";
-export type BrokenStatus = "reported" | "sent" | "resolved";
+export const SEVERITIES = ["low", "normal", "urgent"] as const;
+export type Severity = (typeof SEVERITIES)[number];
 
-export interface Report {
+/**
+ * One status set for every report. Labels differ by type (see statusLabel):
+ * open -> routed (sent to the right office) -> in_progress -> resolved (fixed / returned to owner).
+ */
+export const STATUSES = ["open", "routed", "in_progress", "resolved"] as const;
+export type Status = (typeof STATUSES)[number];
+
+export type Visibility = "public" | "private";
+
+export interface ReportEvent {
+  at: string;
+  status: Status;
+  note: string;
+  by: "reporter" | "staff" | "system";
+  /** Only the reporter and USF staff see it (e.g. an owner's proof answer). Stripped by publicView. */
+  private?: boolean;
+}
+
+/** A report as stored server-side. `owner_token` never leaves the server except once, to the reporter. */
+export interface StoredReport {
   id: string;
   type: ReportType;
   category: Category | null;
   color: string | null;
   brand: string | null;
   description: string;
-  /** first photo (kept for older rows and the email draft) */
+  tags: string[];
+  /** first photo */
   photo_url: string | null;
-  /** all photos, up to 3 for lost reports */
-  photo_urls: string[] | null;
+  /** all photos (up to 3 for lost reports: the item, or proof like a Find My screenshot) */
+  photo_urls: string[];
   building: string | null;
-  /** exact spot inside the building, e.g. "2nd floor, by the elevators" */
+  /** exact spot, e.g. "2nd floor, by the elevators" */
   spot: string | null;
   lat: number | null;
   lng: number | null;
   issue_type: IssueType | null;
-  user_id: string | null;
-  status: LostFoundStatus | BrokenStatus;
+  severity: Severity;
+  status: Status;
+  visibility: Visibility;
+  office_id: string | null;
+  owner_token: string;
+  me_too_count: number;
+  events: ReportEvent[];
   occurred_at: string;
   created_at: string;
-  me_too_count?: number;
+  updated_at: string;
 }
 
-export type NewReport = Omit<Report, "id" | "created_at" | "user_id" | "status" | "me_too_count"> & {
-  status?: Report["status"];
-};
+/** What the public (and other students) can see. Secrets and exact details are removed by `publicView`. */
+export type Report = Omit<StoredReport, "owner_token">;
 
-/**
- * One opening window. days uses JS getDay(): 0 = Sunday ... 6 = Saturday.
- * If close <= open the window runs past midnight (e.g. 07:00-02:00 closes at 2am the next day).
- */
+/** What a student submits. */
+export interface NewReport {
+  type: ReportType;
+  category: Category | null;
+  color: string | null;
+  brand: string | null;
+  description: string;
+  tags: string[];
+  building: string | null;
+  spot: string | null;
+  lat: number | null;
+  lng: number | null;
+  issue_type: IssueType | null;
+  severity: Severity;
+  occurred_at: string;
+}
+
+/** One opening window. days uses JS getDay(): 0 = Sunday ... 6 = Saturday.
+ * If close <= open the window runs past midnight (e.g. 07:00-02:00 closes at 2am the next day). */
 export interface HoursRule {
   days: number[];
   open: string; // "08:00"
@@ -112,10 +194,10 @@ export interface HoursRule {
 export interface Office {
   id: string;
   name: string;
+  short: string;
   handles: string;
-  /** item categories, issue kinds, or routing tags ("valuables", "library", "facilities", "housing") */
   categories: string[];
-  /** null = unknown / not verified yet. */
+  /** null = unknown / not verified yet. Empty array = closed. */
   hours: HoursRule[] | null;
   always_open?: boolean;
   phone: string | null;
@@ -123,10 +205,26 @@ export interface Office {
   url: string | null;
   location: string | null;
   sort_order: number;
-  /** true only after phone AND hours are checked against an official USF page */
+  /** true only after a teammate checks it against an official USF page */
   verified: boolean;
 }
 
+export function statusLabel(type: ReportType, s: Status): string {
+  if (type === "issue") return { open: "Reported", routed: "Sent to USF", in_progress: "Being fixed", resolved: "Fixed" }[s];
+  if (type === "lost") return { open: "Looking", routed: "Possible match", in_progress: "Claim in progress", resolved: "Got it back" }[s];
+  return { open: "Waiting for owner", routed: "Turned in", in_progress: "Claim in progress", resolved: "Returned" }[s];
+}
+
+export function reportTitle(r: Pick<Report, "type" | "issue_type" | "color" | "brand" | "category">): string {
+  if (r.type === "issue") return ISSUE_LABELS[r.issue_type ?? "other"];
+  return itemTitle({ color: r.color, brand: r.brand, category: r.category ?? "other" });
+}
+
+export function reportIcon(r: Pick<Report, "type" | "issue_type" | "category">): string {
+  return r.type === "issue" ? ISSUE_ICONS[r.issue_type ?? "other"] : CATEGORY_ICONS[r.category ?? "other"];
+}
+
+/** "Black Hydro Flask water bottle" (from the V1 design). */
 export function itemTitle(r: { color: string | null; category: Category | null; brand?: string | null }) {
   if (!r.category) return "";
   const label = CATEGORY_LABELS[r.category].toLowerCase().replace("airpods / earbuds", "earbuds");

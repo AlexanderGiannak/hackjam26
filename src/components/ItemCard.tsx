@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { itemTitle, ISSUE_LABELS, type Report } from "@/lib/types";
+import { placeLabel } from "@/lib/geo";
+import { itemTitle, ISSUE_LABELS, statusLabel, type Report } from "@/lib/types";
 import { ImageIcon } from "./Icons";
 
 export function timeAgo(iso: string) {
@@ -14,9 +15,9 @@ export function timeAgo(iso: string) {
 export function ItemCard({ report, action, reason }: { report: Report; action?: { label: string; href: string }; reason?: string }) {
   const lost = report.type === "lost";
   const photo = report.photo_urls?.[0] ?? report.photo_url;
-  const title = report.type === "broken" ? ISSUE_LABELS[report.issue_type ?? "other"] : itemTitle(report);
+  const title = report.type === "issue" ? ISSUE_LABELS[report.issue_type ?? "other"] : itemTitle(report);
   return (
-    <div className="flex flex-col rounded-2xl border border-line bg-white p-3">
+    <div className="relative flex flex-col rounded-2xl border border-line bg-white p-3">
       <div className="mb-2.5 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl border-[1.5px] border-dashed border-line bg-tint text-muted">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -26,15 +27,18 @@ export function ItemCard({ report, action, reason }: { report: Report; action?: 
         )}
       </div>
       <div className="flex items-start justify-between gap-2">
-        <h3 className="font-semibold leading-snug">{title}</h3>
+        <h3 className="font-semibold leading-snug">
+          <Link href={`/r/${report.id}`} className="after:absolute after:inset-0">{title}</Link>
+        </h3>
         <span className="pt-0.5 text-xs font-bold tracking-wider text-bull">{report.type.toUpperCase()}</span>
       </div>
       <p className="mt-0.5 text-sm text-muted">
-        {lost ? "Last seen near" : "Found near"} {report.building} · {timeAgo(report.occurred_at)}
+        {lost ? "Last seen near" : "Found near"} {report.building ?? placeLabel(report)} · {timeAgo(report.occurred_at)}
       </p>
+      {report.status !== "open" && <p className="mt-0.5 text-xs font-semibold text-bull">{statusLabel(report.type, report.status)}</p>}
       {reason && <p className="mt-1 text-sm font-medium text-bull">{reason}</p>}
       {action && (
-        <Link href={action.href} className="link mt-auto pt-2 text-sm text-bull">
+        <Link href={action.href} className="link relative z-10 mt-auto pt-2 text-sm text-bull">
           {action.label}
         </Link>
       )}

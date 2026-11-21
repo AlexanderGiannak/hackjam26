@@ -1,7 +1,9 @@
 "use client";
 
-import { blobToBase64, compressImage } from "./photo";
-import { CATEGORIES, COLORS, ISSUE_TYPES, type Category, type IssueType } from "./types";
+import type { SensitiveBox } from "./analysis";
+import { aiAvailable, analyzePhoto as aiAnalyze } from "./client";
+import { compressImage } from "./photo";
+import { COLORS, type Category, type IssueType, type Severity } from "./types";
 
 export type AutofillMode = "item" | "broken";
 
@@ -12,26 +14,18 @@ export interface AutoResult {
   description?: string;
   is_id_card?: boolean;
   issue_type?: IssueType;
+  severity?: Severity;
+  tags?: string[];
+  /** what the AI thinks the photo shows (an item, or a problem on campus) */
+  kind?: "item" | "issue";
+  /** faces, plates, cards and screens to pixelate before upload */
+  sensitive?: SensitiveBox[];
   /** ai = Gemini read the photo; basic = on-device color guess only; none = nothing we could fill */
   source: "ai" | "basic" | "none";
 }
 
-let enabledP: Promise<boolean> | null = null;
 /** Whether the server has a Gemini key (checked once per page load). */
-export function aiEnabled(): Promise<boolean> {
-  enabledP ??= fetch("/api/analyze")
-    .then((r) => r.json())
-    .then((j) => !!j.enabled)
-    .catch(() => false);
-  return enabledP;
-}
-
-const CACHE_KEY = "campus-helper.ai-cache.v2";
-function fingerprint(b64: string) {
-  let h = 0;
-  for (let i = 0; i < b64.length; i += 97) h = (h * 31 + b64.charCodeAt(i)) | 0;
-  return `${b64.length}:${h}`;
-}
+export const aiEnabled = aiAvailable;
 
 const COLOR_SYNONYMS: Record<string, string> = {
   navy: "blue", teal: "blue", turquoise: "blue", cyan: "blue", "light blue": "blue", "dark blue": "blue",
@@ -105,30 +99,10 @@ function classify(r: number, g: number, b: number): string {
   return l > 0.5 ? "pink" : "purple";
 }
 
-async function callAi(image: string, mode: AutofillMode): Promise<Omit<AutoResult, "source">> {
-  const key = `${mode}:${fingerprint(image)}`;
-  let cache: Record<string, Omit<AutoResult, "source">> = {};
-  try {
-    cache = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
-  } catch {}
-  if (cache[key]) return cache[key];
-
-  const res = await fetch("/api/analyze", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image, mode }),
-  });
-  const j = await res.json();
-  if (!res.ok) throw new Error(j.error || "AI failed");
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ ...cache, [key]: j }));
-  } catch {}
-  return j;
-}
-
 /**
- * Read a photo and suggest form values. Uses Gemini when the server has a key,
- * otherwise (or if the call fails) falls back to an on-device color guess.
+ * Read a photo and suggest form values. Uses Gemini (through /api/analyze, which also finds faces,
+ * plates and cards to blur) when the server has a key; otherwise, or if the call fails, falls back
+ * to an on-device color guess.
  */
 export async function analyzePhoto(file: File, mode: AutofillMode): Promise<AutoResult> {
   const blob = await compressImage(file, 768, 0.7);
@@ -136,20 +110,19 @@ export async function analyzePhoto(file: File, mode: AutofillMode): Promise<Auto
 
   if (await aiEnabled()) {
     try {
-      const r = await callAi(await blobToBase64(blob), mode);
-      const out: AutoResult = { source: "ai" };
+      const a = await aiAnalyze(blob);
+      const out: AutoResult = { source: "ai", sensitive: a.sensitive, kind: a.kind };
       if (mode === "item") {
-        if (r.category && (CATEGORIES as readonly string[]).includes(r.category)) out.category = r.category;
-        if (r.is_id_card) {
-          out.category = "id_card";
-          out.is_id_card = true;
-        }
-        out.color = normalizeColor(r.color) ?? localColor;
-        if (r.brand && r.brand.toLowerCase() !== "null") out.brand = r.brand;
-      } else if (r.issue_type && (ISSUE_TYPES as readonly string[]).includes(r.issue_type)) {
-        out.issue_type = r.issue_type;
+        if (a.category) out.category = a.category;
+        if (a.category === "id_card") out.is_id_card = true;
+        out.color = normalizeColor(a.color) ?? localColor;
+        if (a.brand && a.brand.toLowerCase() !== "null") out.brand = a.brand;
+        if (a.tags.length) out.tags = a.tags;
+      } else {
+        if (a.issue_type) out.issue_type = a.issue_type;
+        out.severity = a.severity;
       }
-      if (r.description) out.description = r.description.trim();
+      if (a.description) out.description = a.description.trim();
       return out;
     } catch {
       // fall through to the on-device guess

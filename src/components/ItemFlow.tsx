@@ -1,21 +1,24 @@
 "use client";
 
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { SensitiveBox } from "@/lib/analysis";
 import { findBuilding, nearestBuilding } from "@/lib/buildings";
-import { findMatches, type Match } from "@/lib/matching";
+import { onCampus } from "@/lib/geo";
+import { createReport, getReport, listReports } from "@/lib/client";
+import { findMatches } from "@/lib/matching";
 import { analyzePhoto, type AutoResult } from "@/lib/autofill";
-import { readGps } from "@/lib/photo";
+import { OFFICES } from "@/lib/offices";
+import { compressImage, readGps, redact } from "@/lib/photo";
 import { foundDropoff, lostChecklist } from "@/lib/routing";
-import { saveReport, toDraft } from "@/lib/save";
-import { getReport, listReports, setStatus } from "@/lib/store";
 import { CATEGORIES, CATEGORY_LABELS, itemTitle, type Category, type Report } from "@/lib/types";
-import { useOffices } from "@/lib/useOffices";
+import Link from "next/link";
+import { OfficeCard } from "./OfficeCard";
 import {
   AutofillBanner,
   AutoTag,
-  BuildingSelect,
+  BuildingPicker,
+  Tip,
   ChoiceGrid,
   ColorSwatches,
   ErrorNote,
@@ -25,9 +28,7 @@ import {
   type AutoState,
   type Photo,
 } from "./fields";
-import { ChevronRight } from "./Icons";
-import { ItemCard } from "./ItemCard";
-import { OfficeCard } from "./OfficeCard";
+import { ChevronRight, PhoneIcon, TargetIcon } from "./Icons";
 import { PostPreview } from "./PostPreview";
 
 type Kind = "lost" | "found";
@@ -42,15 +43,19 @@ type When = keyof typeof WHEN;
 
 type Field = "category" | "color" | "brand" | "details" | "building";
 
-interface Done {
-  report: Report | null;
-  matches: Match[];
-}
+/** Items that usually show up in Find My / Find My Device: a screenshot of the last location is great proof. */
+const FIND_MY: Partial<Record<Category, string>> = {
+  phone: "Most phones show up in Find My or Find My Device.",
+  earbuds: "Most AirPods / earbuds show up in Find My.",
+  laptop: "Most laptops show up in Find My or Find My Device.",
+  tablet: "Most tablets show up in Find My or Find My Device.",
+};
 
 export function ItemFlow({ type }: { type: Kind }) {
   const lost = type === "lost";
-  const offices = useOffices();
+  const offices = OFFICES;
   const params = useSearchParams();
+  const router = useRouter();
 
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [category, setCategory] = useState<Category | "">("");
@@ -64,7 +69,11 @@ export function ItemFlow({ type }: { type: Kind }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<Done | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [describe, setDescribe] = useState(false);
+  const [gotIt, setGotIt] = useState(false);
+  // faces, plates, cards and screens the AI found in the first photo: pixelated on this phone before upload
+  const sensitive = useRef<SensitiveBox[]>([]);
   const [candidates, setCandidates] = useState<Report[]>([]);
   const [linked, setLinked] = useState<Report | null>(null);
   // photo autofill: which fields we filled, which the user has edited, and an undo snapshot
@@ -83,8 +92,7 @@ export function ItemFlow({ type }: { type: Kind }) {
   useEffect(() => {
     const id = params.get("for");
     if (!id) return;
-    getReport(id).then((r) => {
-      if (!r) return;
+    getReport(id).then(({ report: r }) => {
       setLinked(r);
       if (r.category) {
         touched.current.add("category");
@@ -98,7 +106,7 @@ export function ItemFlow({ type }: { type: Kind }) {
         touched.current.add("building");
         setBuilding(r.building);
       }
-    });
+    }).catch(() => {});
   }, [params]);
 
   const isId = category === "id_card";
@@ -106,6 +114,7 @@ export function ItemFlow({ type }: { type: Kind }) {
 
   const draftReport: Report = useMemo(() => {
     const b = findBuilding(building);
+    const now = new Date().toISOString();
     return {
       id: "draft",
       type,
@@ -113,19 +122,25 @@ export function ItemFlow({ type }: { type: Kind }) {
       color: color || null,
       brand: brand.trim() || null,
       description: details.trim(),
+      tags,
       photo_url: null,
-      photo_urls: null,
+      photo_urls: [],
       building: building || null,
       spot: null,
       lat: gps?.lat ?? b?.lat ?? null,
       lng: gps?.lng ?? b?.lng ?? null,
       issue_type: null,
-      user_id: null,
+      severity: "normal",
       status: "open",
+      visibility: "public",
+      office_id: null,
+      me_too_count: 0,
+      events: [],
       occurred_at: new Date(Date.now() - (lost ? WHEN[when].hours : 0) * 3_600_000).toISOString(),
-      created_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
     };
-  }, [type, category, color, brand, details, building, gps, lost, when]);
+  }, [type, category, color, brand, details, tags, building, gps, lost, when]);
 
   const liveMatches = useMemo(
     () => (!lost && category && building ? findMatches(draftReport, candidates) : []),
@@ -142,7 +157,12 @@ export function ItemFlow({ type }: { type: Kind }) {
       return n;
     });
   };
-  const editCategory = (v: Category) => (userEdit("category"), setCategory(v));
+  const editCategory = (v: Category) => {
+    // IDs never get posted: send people to the page that tells them exactly where to go.
+    if (v === "id_card") return router.push(`/${type}/id`);
+    userEdit("category");
+    setCategory(v);
+  };
   const editColor = (v: string) => (userEdit("color"), setColor(v));
   const editBrand = (v: string) => (userEdit("brand"), setBrand(v));
   const editDetails = (v: string) => (userEdit("details"), setDetails(v));
@@ -152,6 +172,7 @@ export function ItemFlow({ type }: { type: Kind }) {
     const isNewFirst = !!next[0] && next[0] !== photos[0];
     setPhotos(next);
     if (!next.length) {
+      sensitive.current = [];
       setGps(null);
       setGpsNote(null);
       setAuto({ state: "idle" });
@@ -175,7 +196,8 @@ export function ItemFlow({ type }: { type: Kind }) {
       filled.add(f);
     };
 
-    setGps(g);
+    const onCampusGps = g && onCampus(g.lat, g.lng) ? g : null;
+    setGps(onCampusGps);
     if (g) {
       const b = nearestBuilding(g.lat, g.lng);
       if (b) {
@@ -187,6 +209,9 @@ export function ItemFlow({ type }: { type: Kind }) {
     put("color", r.color, setColor);
     put("brand", r.brand, setBrand);
     put("details", r.description, setDetails);
+    if ((r.description && !touched.current.has("details")) || (r.brand && !touched.current.has("brand"))) setDescribe(true);
+    if (r.tags?.length) setTags(r.tags);
+    sensitive.current = r.sensitive ?? [];
 
     undoSnap.current = snap;
     setAutoFields(filled);
@@ -230,23 +255,36 @@ export function ItemFlow({ type }: { type: Kind }) {
     if (e) return;
     setBusy(true);
     try {
-      if (!lost && isId) {
-        // privacy flag: IDs are never posted publicly
-        setDone({ report: null, matches: [] });
-      } else {
-        const r = await saveReport(toDraft(draftReport), photos.map((p) => p.file));
-        const fresh = await listReports(lost ? "found" : "lost");
-        setDone({ report: r, matches: findMatches(r, fresh) });
-      }
-      window.scrollTo({ top: 0 });
+      // IDs: saved privately and routed to the Card Center, and the photo never leaves the phone.
+      // Everything else: resized, EXIF stripped, faces/plates/cards pixelated, then uploaded.
+      const blobs = isId
+        ? []
+        : await Promise.all(photos.map((p, i) => (i === 0 ? redact(p.file, sensitive.current) : compressImage(p.file))));
+      const d = draftReport;
+      const r = await createReport(
+        {
+          type,
+          category: d.category,
+          color: d.color,
+          brand: d.brand,
+          description: d.description,
+          tags: d.tags,
+          building: d.building,
+          spot: null,
+          lat: d.lat,
+          lng: d.lng,
+          issue_type: null,
+          severity: "normal",
+          occurred_at: d.occurred_at,
+        },
+        blobs,
+      );
+      router.push(`/r/${r.id}?new=1`);
     } catch (err) {
       setError((err as Error).message || "Something went wrong. Try again.");
-    } finally {
       setBusy(false);
     }
   }
-
-  if (done) return <DoneView type={type} done={done} photoUrl={photos[0]?.url} draft={draftReport} pickup={dropoff?.office.name} />;
 
   const title = lost ? "I lost something" : "I found something";
   const previewTitle = itemTitle({ color: color || null, category: category || null, brand: brand.trim() || null });
@@ -268,7 +306,7 @@ export function ItemFlow({ type }: { type: Kind }) {
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* ---------- Step 1: details ---------- */}
-        <section className={step === 2 ? "hidden lg:block" : ""}>
+        <section className={`min-w-0 ${step === 2 ? "hidden lg:block" : ""}`}>
           <SectionHead title="Item details" hint={lost ? "Fill in what you can" : "Photo, type and building are needed"} />
           <div className="panel space-y-7">
             <div>
@@ -284,8 +322,54 @@ export function ItemFlow({ type }: { type: Kind }) {
                   )
                 }
                 hint={lost ? "A photo of the item, or proof like a Find My screenshot or a receipt. Add up to 3." : undefined}
+                tip={
+                  lost && category && FIND_MY[category] ? (
+                    <Tip icon={<TargetIcon />}>
+                      {FIND_MY[category]} Add a screenshot of its last location as one of your photos.
+                    </Tip>
+                  ) : undefined
+                }
               />
               <AutofillBanner auto={auto} onUndo={auto.count ? undoAutofill : undefined} />
+              <button type="button" onClick={() => setDescribe((d) => !d)} className="link mt-4 block text-[15px] text-bull">
+                {describe ? "Hide description" : lost ? "No photo? Describe it instead" : "Add a description (optional)"}
+              </button>
+              {describe && (
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="label" htmlFor="details">
+                      Describe it
+                      {autoFields.has("details") && <AutoTag />}
+                    </label>
+                    <textarea
+                      id="details"
+                      className="field min-h-24 border-bull"
+                      value={details}
+                      maxLength={500}
+                      onChange={(e) => editDetails(e.target.value)}
+                      placeholder={lost ? "e.g. White AirPods Pro case with a small blue star sticker on the back" : "What it looks like. Skip anything private."}
+                    />
+                    <p className="mt-1.5 text-sm text-muted">
+                      {lost
+                        ? "We match your words against found posts, so details matter. Other students never see this; it's how a desk checks it's yours."
+                        : "Skip names, numbers or anything private."}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="brand">
+                      Brand / model <span className="font-normal text-muted">(optional)</span>
+                      {autoFields.has("brand") && <AutoTag />}
+                    </label>
+                    <input
+                      id="brand"
+                      className="field-soft"
+                      value={brand}
+                      onChange={(e) => editBrand(e.target.value)}
+                      placeholder="e.g. iPhone 15, Hydro Flask, JanSport"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <ChoiceGrid
@@ -297,64 +381,40 @@ export function ItemFlow({ type }: { type: Kind }) {
               auto={autoFields.has("category")}
             />
 
-            {!lost && isId && (
+            {isId && (
               <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-[15px] text-amber-900">
-                <strong>ID cards aren&apos;t posted publicly.</strong> We&apos;ll just show you where to take it so the owner&apos;s
-                information stays private.
+                <strong>This looks like an ID or card. We don&apos;t post those.</strong>{" "}
+                <Link href={`/${type}/id`} className="font-semibold underline">
+                  {lost ? "Here's who to call about a lost ID" : "Here's where to hand it in"}
+                </Link>
+                .
               </div>
             )}
 
             <ColorSwatches value={color} onChange={editColor} auto={autoFields.has("color")} />
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <BuildingSelect
-                id="building"
-                className="sm:col-span-2 lg:col-span-1"
-                label={lost ? "Where do you think you lost it?" : "Where did you find it?"}
-                value={building}
-                onChange={editBuilding}
-                note={gpsNote}
-                auto={autoFields.has("building")}
-              />
-              {lost && (
-                <div>
-                  <label className="label" htmlFor="when">When?</label>
-                  <select id="when" className="field" value={when} onChange={(e) => setWhen(e.target.value as When)}>
-                    {(Object.keys(WHEN) as When[]).map((k) => (
-                      <option key={k} value={k}>{WHEN[k].label}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
+            <BuildingPicker
+              label={lost ? "Where do you think you lost it?" : "Where did you find it?"}
+              value={building}
+              onChange={editBuilding}
+              note={gpsNote}
+              auto={autoFields.has("building")}
+            />
 
-            <div>
-              <label className="label" htmlFor="brand">
-                Brand / model <span className="font-normal text-muted">(optional)</span>
-                {autoFields.has("brand") && <AutoTag />}
-              </label>
-              <input
-                id="brand"
-                className="field-soft"
-                value={brand}
-                onChange={(e) => editBrand(e.target.value)}
-                placeholder="e.g. iPhone 15, Hydro Flask, JanSport"
-              />
-            </div>
+            {lost && (
+              <div>
+                <label className="label" htmlFor="when">When?</label>
+                <select id="when" className="field" value={when} onChange={(e) => setWhen(e.target.value as When)}>
+                  {(Object.keys(WHEN) as When[]).map((k) => (
+                    <option key={k} value={k}>{WHEN[k].label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-            <div>
-              <label className="label" htmlFor="details">
-                Anything else? <span className="font-normal text-muted">(optional)</span>
-                {autoFields.has("details") && <AutoTag />}
-              </label>
-              <textarea
-                id="details"
-                className="field-soft min-h-20"
-                value={details}
-                onChange={(e) => editDetails(e.target.value)}
-                placeholder={lost ? "e.g. Clear case with a Bulls sticker" : "What it looks like. Skip anything private."}
-              />
-            </div>
+            {lost && building && !isId && (
+              <NextSteps category={category || null} building={building} gotIt={gotIt} onGotIt={() => setGotIt(true)} />
+            )}
           </div>
 
           <div className="mt-6 space-y-3 lg:hidden">
@@ -366,7 +426,7 @@ export function ItemFlow({ type }: { type: Kind }) {
         </section>
 
         {/* ---------- Step 2 / sidebar: preview ---------- */}
-        <aside className={step === 1 ? "hidden lg:block" : ""}>
+        <aside className={`min-w-0 ${step === 1 ? "hidden lg:block" : ""}`}>
           <SectionHead title="Your post preview" hint="Updates as you fill it in" />
           <div className="space-y-4 lg:sticky lg:top-24">
             <PostPreview
@@ -407,103 +467,42 @@ export function ItemFlow({ type }: { type: Kind }) {
   );
 }
 
-function DoneView({
-  type,
-  done,
-  photoUrl,
-  draft,
-  pickup,
-}: {
-  type: Kind;
-  done: Done;
-  photoUrl?: string;
-  draft: Report;
-  pickup?: string;
-}) {
-  const offices = useOffices();
-  const lost = type === "lost";
-  const [closed, setClosed] = useState(false);
-  const r = done.report ?? draft;
-  const steps = lost ? lostChecklist(offices, r.category, r.building) : [];
-  const drop = !lost ? foundDropoff(offices, r.category, r.building) : null;
-
+/** V2 "What to do next": once you pick a building, call these first. If one has it, you never need to post. */
+function NextSteps({ category, building, gotIt, onGotIt }: { category: Category | null; building: string; gotIt: boolean; onGotIt: () => void }) {
+  const steps = lostChecklist(OFFICES, category, building);
+  const what = category ? CATEGORY_LABELS[category].toLowerCase() : "item";
   return (
-    <div>
-      <PageHead
-        back={{ label: "Back to home", href: "/" }}
-        title={lost ? "Your next steps" : done.report ? "Where to turn it in" : "Where to take this ID"}
-        sub={
-          lost
-            ? "Your post is live. Contact these offices in order."
-            : done.report
-              ? "Posted to the found list. Thanks for helping!"
-              : "Not posted publicly, to protect the owner's information."
-        }
-      />
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="space-y-3">
-          {lost ? (
-            <ol className="space-y-3">
-              {steps.map((s, i) => (
-                <li key={s.office.id}>
-                  <OfficeCard office={s.office} step={i + 1} why={s.why} />
-                </li>
-              ))}
-            </ol>
-          ) : (
-            drop && <OfficeCard office={drop.office} why={drop.why} />
-          )}
-
-          {(lost || done.report) && (
-            <div className="pt-5">
-              <SectionHead title={lost ? "Possible matches" : "Possible owners"} />
-              {done.matches.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-line bg-white p-4 text-[15px] text-muted">
-                  {lost
-                    ? "No found posts match yet. Your post is saved, so a future found post can match it."
-                    : "No lost reports match yet. When someone reports it, they'll see your post."}
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {done.matches.map((m) => (
-                    <ItemCard key={m.report.id} report={m.report} reason={m.reason} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {done.report && (
-          <aside className="space-y-4">
-            <SectionHead title="Your post" />
-            <PostPreview
-              type={type}
-              photoUrl={photoUrl}
-              title={itemTitle(r)}
-              color={r.color ?? ""}
-              building={r.building ?? ""}
-              pickup={pickup}
-              status={closed ? (lost ? "Found it!" : "Returned") : undefined}
-            />
-            {lost && (
-              <div className="flex gap-3">
-                <Link href="/browse?type=found" className="btn-primary flex-1">Browse found</Link>
-                <button
-                  type="button"
-                  disabled={closed}
-                  onClick={async () => {
-                    await setStatus(done.report!.id, "closed").catch(() => {});
-                    setClosed(true);
-                  }}
-                  className="btn-ghost"
-                >
-                  {closed ? "Marked found" : "I found it"}
-                </button>
-              </div>
-            )}
-            {closed && <p className="text-sm text-bull">Glad you got it back! We took your post down.</p>}
-          </aside>
+    <div className="rounded-2xl border-[1.5px] border-bull bg-white p-4">
+      <h3 className="text-lg font-bold">What to do next</h3>
+      <p className="text-[15px] text-muted">
+        Try these in order for your {what} lost in {building}.
+      </p>
+      <div className="mt-3">
+        <Tip icon={<PhoneIcon className="h-5 w-5" />}>
+          <strong>Call first.</strong> If they already have it, you won&apos;t need to post anything.
+        </Tip>
+      </div>
+      <ol className="mt-4 space-y-5">
+        {steps.map((s, i) => (
+          <li key={s.office.id}>
+            <OfficeCard office={s.office} step={i + 1} why={s.why} bare />
+          </li>
+        ))}
+      </ol>
+      <div className="mt-5 border-t border-line pt-4">
+        {gotIt ? (
+          <div className="rounded-xl bg-bull-soft p-3 text-[15px]">
+            <strong>Great, glad you got it back!</strong> Nothing was posted.{" "}
+            <Link href="/" className="link">Back to home</Link>
+          </div>
+        ) : (
+          <>
+            <p className="font-semibold">Did one of them have it?</p>
+            <button type="button" onClick={onGotIt} className="btn-ghost mt-2 w-full">
+              Yes, they have it. I&apos;m done
+            </button>
+            <p className="mt-2 text-sm text-muted">No luck? Keep going and post it so finders can see it.</p>
+          </>
         )}
       </div>
     </div>

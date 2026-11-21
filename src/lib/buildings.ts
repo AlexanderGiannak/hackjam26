@@ -93,7 +93,7 @@ export function nearestBuilding(lat: number, lng: number, maxMeters = 400): Buil
   return bestD <= maxMeters ? best : undefined;
 }
 
-function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
+export function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371000;
   const toRad = (x: number) => (x * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);

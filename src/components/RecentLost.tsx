@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { listReports } from "@/lib/store";
+import { listReports } from "@/lib/client";
 import type { Report } from "@/lib/types";
 import { ItemCard } from "./ItemCard";
 
@@ -9,7 +9,7 @@ export function RecentLost() {
   const [rows, setRows] = useState<Report[] | null>(null);
   useEffect(() => {
     listReports("lost")
-      .then((r) => setRows(r.filter((x) => x.status !== "closed").slice(0, 4)))
+      .then((r) => setRows(r.filter((x) => x.status !== "resolved").slice(0, 4)))
       .catch(() => setRows([]));
   }, []);
   if (!rows) return <div className="h-40" />;

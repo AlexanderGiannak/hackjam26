@@ -22,3 +22,7 @@ next-env.d.ts
 npm-debug.log*
 .env*
 !.env.example
+
+# real campus photos for the AI eval stay local (faces, plates)
+/eval/photos/
+/eval/results.json

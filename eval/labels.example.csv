@@ -1,0 +1,11 @@
+# One row per photo in eval/photos/. kind = item | issue.
+# expected = true category for items (phone, earbuds, laptop, tablet, wallet, keys, id_card, bottle, bag, jacket, textbook, other)
+#            or true issue type for problems (lighting, water, ac, door, elevator, furniture, restroom, trash, road, parking, safety, other).
+# building = where it is (optional; used to check the routed office). faces / plates = how many are visible in the photo.
+file,kind,expected,building,faces,plates
+light-cooper-1.jpg,issue,lighting,Cooper Hall,0,0
+pothole-1.jpg,issue,road,,0,0
+car-ramp-1.jpg,issue,parking,,0,1
+hallway-people-1.jpg,issue,trash,Marshall Student Center,2,0
+bottle-1.jpg,item,bottle,Marshall Student Center,0,0
+airpods-1.jpg,item,earbuds,Tampa Campus Library,0,0

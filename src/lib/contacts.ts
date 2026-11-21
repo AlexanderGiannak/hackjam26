@@ -52,6 +52,12 @@ export const TAMPA_CONTACTS: Contact[] = [
     note: "Mon-Fri 8am-5pm. USF Village residents: 813-974-0764. After hours: your RA.",
     source: "https://www.usf.edu/housing/residential-experience/resident-services/maintenance-requests.aspx",
   },
+  {
+    name: "Parking & Transportation Services",
+    phone: "813-974-3990",
+    note: "Cars blocking ramps, fire lanes or spaces; broken gates. Email psweb@usf.edu.",
+    source: "https://www.usf.edu/parking/about-us/contact-us.aspx",
+  },
 ];
 
 export const TAMPA_LINKS: { label: string; url: string }[] = [
