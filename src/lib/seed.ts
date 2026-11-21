@@ -4,7 +4,7 @@ const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString
 
 /** Demo rows used in local mode (mirrors the seed in supabase/schema.sql). */
 export function seedReports(): Report[] {
-  const base = { brand: null, photo_url: null, lat: null, lng: null, issue_type: null, user_id: null };
+  const base = { brand: null, photo_url: null, photo_urls: null, spot: null, lat: null, lng: null, issue_type: null, user_id: null };
   return [
     {
       ...base,
@@ -30,6 +30,43 @@ export function seedReports(): Report[] {
       status: "open",
       occurred_at: hoursAgo(20),
       created_at: hoursAgo(20),
+    },
+    {
+      ...base,
+      id: "seed-lost-earbuds",
+      type: "lost",
+      category: "earbuds",
+      color: "white",
+      brand: "AirPods",
+      description: "White AirPods Pro case, small scratch on the lid.",
+      building: "Engineering Building II",
+      status: "open",
+      occurred_at: hoursAgo(6),
+      created_at: hoursAgo(6),
+    },
+    {
+      ...base,
+      id: "seed-lost-jacket",
+      type: "lost",
+      category: "jacket",
+      color: "green",
+      description: "Green USF zip-up hoodie, size M.",
+      building: "Tampa Campus Library",
+      status: "open",
+      occurred_at: hoursAgo(26),
+      created_at: hoursAgo(26),
+    },
+    {
+      ...base,
+      id: "seed-lost-textbook",
+      type: "lost",
+      category: "textbook",
+      color: "blue",
+      description: "Calculus textbook with my notes inside the cover.",
+      building: "Cooper Hall",
+      status: "open",
+      occurred_at: hoursAgo(40),
+      created_at: hoursAgo(40),
     },
     {
       ...base,

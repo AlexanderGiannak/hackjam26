@@ -23,7 +23,7 @@ create table if not exists public.offices (
 create table if not exists public.reports (
   id          uuid primary key default gen_random_uuid(),
   type        text not null check (type in ('lost','found','broken')),
-  category    text check (category in ('phone','wallet','laptop','id_card','bottle','keys','bag','other')),
+  category    text,
   color       text,
   brand       text,
   description text not null default '',
@@ -31,7 +31,7 @@ create table if not exists public.reports (
   building    text,
   lat         double precision,
   lng         double precision,
-  issue_type  text check (issue_type in ('lighting','fountain','door','furniture','other')),
+  issue_type  text,
   user_id     uuid,
   status      text not null default 'open'
               check (status in ('open','matched','closed','reported','sent','resolved')),
@@ -40,6 +40,16 @@ create table if not exists public.reports (
   constraint found_needs_photo check (type <> 'found' or photo_url is not null),
   constraint broken_needs_issue check (type <> 'broken' or issue_type is not null)
 );
+-- V1 wireframes: more categories/issue types, exact spot, up to 3 photos (safe on existing projects)
+alter table public.reports add column if not exists spot text;
+alter table public.reports add column if not exists photo_urls text[];
+alter table public.reports drop constraint if exists reports_category_check;
+alter table public.reports add constraint reports_category_check check (category is null or category in
+  ('phone','earbuds','laptop','tablet','wallet','keys','id_card','bottle','bag','jacket','textbook','other'));
+alter table public.reports drop constraint if exists reports_issue_type_check;
+alter table public.reports add constraint reports_issue_type_check check (issue_type is null or issue_type in
+  ('lighting','fountain','door','furniture','restroom','ac','elevator','other'));
+
 create index if not exists reports_type_idx on public.reports (type, created_at desc);
 
 -- ---------- me_too (stretch) ----------
@@ -48,7 +58,8 @@ create table if not exists public.me_too (
   count     int not null default 0
 );
 
-create or replace view public.reports_with_counts
+drop view if exists public.reports_with_counts;
+create view public.reports_with_counts
 with (security_invoker = true) as
   select r.*, coalesce(m.count, 0) as me_too_count
   from public.reports r left join public.me_too m on m.report_id = r.id;
@@ -129,13 +140,15 @@ insert into public.offices (id, name, handles, categories, hours, always_open, p
    '{library}', null, false, '813-974-2729', null, 'https://lib.usf.edu/forms/report-a-problem/', '4101 USF Apple Dr, 1st floor', 3, false),
  ('lib-shimberg', 'Shimberg Health Sciences Library Desk', 'Items left in the Shimberg Health Sciences Library, and library building issues.',
    '{library}', null, false, '813-974-8432', null, 'https://libraries.health.usf.edu/about/shimberg', '12908 Bruce B. Downs Blvd', 4, false),
+ ('msc', 'MSC Information Desk', 'Non-valuable items found in the Marshall Student Center (held 30 days). Valuables go to USF Police daily.',
+   '{msc}', null, false, '813-974-3180', null, 'https://www.usf.edu/student-affairs/msc/msc-services/lost-found.aspx', 'Marshall Student Center', 5, false),
  ('facilities', 'Facilities Service Center', 'Broken lights, doors, fountains, and furniture in non-residential buildings. After-hours emergencies: 813-974-2845 (24/7).',
    '{facilities,lighting,fountain,door,furniture,other}', '[{"days":[1,2,3,4,5],"open":"08:00","close":"17:00"}]', false,
    '813-974-2750', 'FM-ServiceCenter@usf.edu', 'https://www.usf.edu/facilities/service-center/contact-us.aspx',
-   '3820 USF Holly Drive (next to the USF Post Office)', 5, true),
+   '3820 USF Holly Drive (next to the USF Post Office)', 6, true),
  ('housing', 'Housing & Residential Education Maintenance', 'Maintenance problems in residence halls. USF Village residents call 813-974-0764. After hours, contact your RA on duty.',
    '{housing}', '[{"days":[1,2,3,4,5],"open":"08:00","close":"17:00"}]', false, '813-974-3446', null,
-   'https://assetessentials.dudesolutions.com/USFH/', null, 6, true)
+   'https://assetessentials.dudesolutions.com/USFH/', null, 7, true)
 on conflict (id) do update set
   name = excluded.name, handles = excluded.handles, categories = excluded.categories, hours = excluded.hours,
   always_open = excluded.always_open, phone = excluded.phone, email = excluded.email, url = excluded.url,

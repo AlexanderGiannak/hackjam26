@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ReportCard } from "@/components/ReportCard";
+import { timeAgo } from "@/components/ItemCard";
+import { ISSUE_LABELS } from "@/lib/types";
 import { listReports, meToo, setStatus } from "@/lib/store";
 import type { BrokenStatus, Report } from "@/lib/types";
 
@@ -55,12 +56,15 @@ export default function IssuesPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-end justify-between">
-        <h1 className="text-2xl font-bold">Campus issues</h1>
-        <Link href="/fix" className="text-sm font-medium text-bull underline">Report one</Link>
+        <div>
+          <Link href="/" className="link text-[15px]">← Back to home</Link>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Campus issues</h1>
+        </div>
+        <Link href="/fix" className="btn-primary px-4 py-2 text-sm">Report one</Link>
       </div>
 
       {hotspots.length > 0 && (
-        <section className="card">
+        <section className="rounded-2xl border border-line bg-white p-5">
           <h2 className="mb-2 font-semibold">Hotspots</h2>
           <ul className="space-y-1.5 text-sm">
             {hotspots.map(([b, n]) => (
@@ -75,22 +79,30 @@ export default function IssuesPage() {
       )}
 
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-      {!rows && !error && <p className="text-neutral-500">Loading...</p>}
-      <div className="space-y-3">
+      {!rows && !error && <p className="text-muted">Loading...</p>}
+      <div className="grid gap-3 md:grid-cols-2">
         {rows?.map((r) => (
-          <ReportCard key={r.id} report={r}>
+          <div key={r.id} className="flex gap-3 rounded-2xl border border-line bg-white p-4">
+            {r.photo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={r.photo_url} alt="" className="h-20 w-20 shrink-0 rounded-xl object-cover" />
+            )}
+            <div className="min-w-0 flex-1">
+            <h3 className="font-semibold">{ISSUE_LABELS[r.issue_type ?? "other"] ?? "Issue"}</h3>
+            <p className="text-sm text-muted">{[r.building, r.spot].filter(Boolean).join(", ")} · {timeAgo(r.created_at)}</p>
+            {r.description && <p className="mt-1 text-[15px]">{r.description}</p>}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <button
                 onClick={() => onMeToo(r.id)}
                 disabled={voted.includes(r.id)}
-                className="rounded-full border border-neutral-300 px-3 py-1 text-xs font-medium disabled:bg-gold-light"
+                className="rounded-full border border-line px-3 py-1 text-xs font-semibold disabled:border-bull disabled:bg-bull-soft disabled:text-bull"
               >
                 👍 Me too · {r.me_too_count ?? 0}
               </button>
               <select
                 value={r.status}
                 onChange={(e) => onStatus(r.id, e.target.value as BrokenStatus)}
-                className="rounded-full border border-neutral-300 bg-white px-2 py-1 text-xs"
+                className="rounded-full border border-line bg-white px-2 py-1 text-xs font-semibold"
                 aria-label="Status"
               >
                 {STATUSES.map((s) => (
@@ -98,7 +110,8 @@ export default function IssuesPage() {
                 ))}
               </select>
             </div>
-          </ReportCard>
+            </div>
+          </div>
         ))}
       </div>
     </div>

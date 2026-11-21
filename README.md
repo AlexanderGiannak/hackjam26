@@ -23,15 +23,23 @@ Use "Reset demo" in the yellow banner to start over.
 | I lost something | `/lost` | Form, saves report, ordered next-steps checklist (office, hours, open-now badge, phone), scored matches against found posts |
 | I found something | `/found` | Photo required, EXIF GPS -> nearest building, drop-off office, posts to found list, shows possible owners. IDs/cards are **not** posted (privacy flag) |
 | Report something broken | `/fix` | Issue type, routes by building kind (academic -> Facilities email, dorm -> Housing link, library -> library form), builds a `mailto:` draft with the photo URL |
-| Browse found items | `/browse` | Keyword search + category/building filters |
+| Browse items | `/browse` | Lost / Found tabs, keyword search, type + building filters, "I found this" / "This is mine" links that prefill the other flow |
+| Contacts | `/contacts` | Sourced lost & found and help numbers for Tampa, St. Petersburg, and Sarasota-Manatee, plus official lost & found links |
 | Campus issues | `/issues` | Me-too counts, status (reported -> sent -> resolved), hotspots |
 | Photo AI (stretch) | `/api/analyze` | Gemini fills category, color, brand, description, ID flag. Key stays server-side. Results cached in the browser for demo safety |
+
+## Design
+
+UI follows `HackJam Wireframes V1.pdf`: white header with nav, two-step flows on mobile (details → preview),
+form + live preview side by side on desktop, color swatches, 12 item types, 8 issue types, and a progress
+checklist + email preview for broken reports. Tokens live in `src/app/globals.css`.
 
 ## Code map
 
 - `src/lib/routing.ts`: which office, in which order (lost checklist, found drop-off, fix-it channel)
 - `src/lib/matching.ts`: weighted score (category 40, color 25, building 20, time 15) + reason string
-- `src/lib/offices.ts`: office seed data (**unverified**, see below)
+- `src/lib/offices.ts`: office seed data with source URLs
+- `src/lib/campuses.ts`: per-campus contact directory with source URLs
 - `src/lib/buildings.ts`: building list with kind + approximate coordinates
 - `src/lib/store.ts`: data layer, Supabase when configured, localStorage otherwise
 - `src/lib/mail.ts`: Facilities email draft (goes to a teammate while testing)

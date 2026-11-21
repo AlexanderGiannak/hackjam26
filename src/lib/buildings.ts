@@ -12,14 +12,14 @@ export interface Building {
   kind: BuildingKind;
   lat: number;
   lng: number;
-  /** office id of the library desk inside this building, if any */
-  libraryOfficeId?: string;
+  /** office id of the lost-and-found / service desk inside this building, if any */
+  deskOfficeId?: string;
 }
 
 export const BUILDINGS: Building[] = [
-  { code: "LIB", name: "Tampa Campus Library", kind: "library", lat: 28.0596, lng: -82.4122, libraryOfficeId: "lib-tampa" },
-  { code: "MDL", name: "Shimberg Health Sciences Library", kind: "library", lat: 28.0636, lng: -82.4225, libraryOfficeId: "lib-shimberg" },
-  { code: "MSC", name: "Marshall Student Center", kind: "student_life", lat: 28.0637, lng: -82.4134 },
+  { code: "LIB", name: "Tampa Campus Library", kind: "library", lat: 28.0596, lng: -82.4122, deskOfficeId: "lib-tampa" },
+  { code: "MDL", name: "Shimberg Health Sciences Library", kind: "library", lat: 28.0636, lng: -82.4225, deskOfficeId: "lib-shimberg" },
+  { code: "MSC", name: "Marshall Student Center", kind: "student_life", lat: 28.0637, lng: -82.4134, deskOfficeId: "msc" },
   { code: "REC", name: "Campus Recreation Center", kind: "student_life", lat: 28.0603, lng: -82.4075 },
   { code: "BSN", name: "Muma College of Business", kind: "academic", lat: 28.0587, lng: -82.41 },
   { code: "ENB", name: "Engineering Building II", kind: "academic", lat: 28.0587, lng: -82.4153 },

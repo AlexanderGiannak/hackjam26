@@ -2,28 +2,36 @@ export type ReportType = "lost" | "found" | "broken";
 
 export const CATEGORIES = [
   "phone",
-  "wallet",
+  "earbuds",
   "laptop",
+  "tablet",
+  "wallet",
+  "keys",
   "id_card",
   "bottle",
-  "keys",
   "bag",
+  "jacket",
+  "textbook",
   "other",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   phone: "Phone",
-  wallet: "Wallet",
+  earbuds: "AirPods / earbuds",
   laptop: "Laptop",
-  id_card: "ID / card",
-  bottle: "Water bottle",
+  tablet: "Tablet",
+  wallet: "Wallet",
   keys: "Keys",
-  bag: "Bag / backpack",
+  id_card: "ID card",
+  bottle: "Water bottle",
+  bag: "Bag",
+  jacket: "Jacket",
+  textbook: "Textbook",
   other: "Other",
 };
 
-export const ISSUE_TYPES = ["lighting", "fountain", "door", "furniture", "other"] as const;
+export const ISSUE_TYPES = ["lighting", "fountain", "door", "furniture", "restroom", "ac", "elevator", "other"] as const;
 export type IssueType = (typeof ISSUE_TYPES)[number];
 
 export const ISSUE_LABELS: Record<IssueType, string> = {
@@ -31,25 +39,33 @@ export const ISSUE_LABELS: Record<IssueType, string> = {
   fountain: "Water fountain",
   door: "Door",
   furniture: "Furniture",
+  restroom: "Restroom",
+  ac: "AC / temperature",
+  elevator: "Elevator",
   other: "Other",
 };
 
-export const COLORS = [
-  "black",
-  "white",
-  "gray",
-  "silver",
-  "blue",
-  "red",
-  "green",
-  "yellow",
-  "orange",
-  "pink",
-  "purple",
-  "brown",
-  "gold",
-  "multicolor",
+/** Swatches shown in the color picker (order matches the V1 wireframes). */
+export const COLOR_SWATCHES = [
+  { name: "black", hex: "#1c1c1c" },
+  { name: "white", hex: "#ffffff" },
+  { name: "gray", hex: "#8a8a8a" },
+  { name: "silver", hex: "#c8cbd0" },
+  { name: "red", hex: "#d23c3c" },
+  { name: "orange", hex: "#e8862a" },
+  { name: "yellow", hex: "#f2c94c" },
+  { name: "green", hex: "#2f9e5a" },
+  { name: "blue", hex: "#2f6fde" },
+  { name: "purple", hex: "#7b4fd6" },
+  { name: "pink", hex: "#e87fb3" },
+  { name: "brown", hex: "#8a5a2e" },
 ] as const;
+export const COLORS = COLOR_SWATCHES.map((c) => c.name);
+
+export function colorHex(name: string | null | undefined): string | null {
+  if (!name) return null;
+  return COLOR_SWATCHES.find((c) => c.name === name.toLowerCase())?.hex ?? null;
+}
 
 export type LostFoundStatus = "open" | "matched" | "closed";
 export type BrokenStatus = "reported" | "sent" | "resolved";
@@ -61,8 +77,13 @@ export interface Report {
   color: string | null;
   brand: string | null;
   description: string;
+  /** first photo (kept for older rows and the email draft) */
   photo_url: string | null;
+  /** all photos, up to 3 for lost reports */
+  photo_urls: string[] | null;
   building: string | null;
+  /** exact spot inside the building, e.g. "2nd floor, by the elevators" */
+  spot: string | null;
   lat: number | null;
   lng: number | null;
   issue_type: IssueType | null;
@@ -91,7 +112,7 @@ export interface Office {
   handles: string;
   /** item categories, issue kinds, or routing tags ("valuables", "library", "facilities", "housing") */
   categories: string[];
-  /** null = unknown / not verified yet. Empty array = closed. "24/7" handled by alwaysOpen. */
+  /** null = unknown / not verified yet. */
   hours: HoursRule[] | null;
   always_open?: boolean;
   phone: string | null;
@@ -99,6 +120,13 @@ export interface Office {
   url: string | null;
   location: string | null;
   sort_order: number;
-  /** flip to true only after a teammate checks it against an official USF page */
+  /** true only after phone AND hours are checked against an official USF page */
   verified: boolean;
+}
+
+export function itemTitle(r: { color: string | null; category: Category | null; brand?: string | null }) {
+  if (!r.category) return "";
+  const label = CATEGORY_LABELS[r.category].toLowerCase().replace("airpods / earbuds", "earbuds");
+  const t = [r.color, r.brand, label].filter(Boolean).join(" ");
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }

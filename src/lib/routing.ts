@@ -6,7 +6,7 @@ export interface Step {
   why: string;
 }
 
-const VALUABLES: Category[] = ["phone", "wallet", "laptop"];
+const VALUABLES: Category[] = ["phone", "earbuds", "laptop", "tablet", "wallet"];
 
 function byId(offices: Office[], id: string | undefined) {
   return id ? offices.find((o) => o.id === id) : undefined;
@@ -19,18 +19,17 @@ export function lostChecklist(offices: Office[], category: Category | null, buil
     if (o && !steps.some((s) => s.office.id === o.id)) steps.push({ office: o, why });
   };
   const b = findBuilding(buildingName);
-  const libDesk = byId(offices, b?.libraryOfficeId);
+  const desk = byId(offices, b?.deskOfficeId);
   const upd = byId(offices, "upd");
-  const card = byId(offices, "card");
 
   if (category === "id_card") {
-    add(card, "Lost IDs are turned in to the Card Center. They can also deactivate and reprint your card.");
+    add(byId(offices, "card"), "Lost IDs are turned in to the Card Center. They can also deactivate and reprint your card.");
   }
   if (category && VALUABLES.includes(category)) {
     add(upd, "USF Police keeps lost valuables like phones, wallets, and laptops. Call them first.");
   }
-  if (libDesk) {
-    add(libDesk, `You think you lost it in ${b!.name}. Items left there usually go to this desk first.`);
+  if (desk) {
+    add(desk, `You think you lost it in ${b!.name}. Items left there go to this desk first.`);
   }
   add(upd, "USF Police runs campus lost and found. Anything not claimed elsewhere ends up here.");
   return steps;
@@ -47,27 +46,37 @@ export function foundDropoff(offices: Office[], category: Category | null, build
   if (category && (VALUABLES.includes(category) || category === "keys")) {
     return { office: upd, why: "USF Police takes valuables so they are stored securely." };
   }
-  const libDesk = byId(offices, b?.libraryOfficeId);
-  if (libDesk) {
-    return { office: libDesk, why: `It was found in ${b!.name}, so the library desk is the first place the owner will look.` };
+  const desk = byId(offices, b?.deskOfficeId);
+  if (desk) {
+    return { office: desk, why: `It was found in ${b!.name}, so this desk is the first place the owner will look.` };
   }
   return { office: upd, why: "USF Police runs campus lost and found." };
 }
 
 export type FixChannel =
   | { kind: "email"; office: Office }
-  | { kind: "link"; office: Office; label: string };
+  | { kind: "link"; office: Office; label: string; hint: string };
 
 /** Right channel for a broken thing, by building kind (Feature 2). */
 export function fixChannel(offices: Office[], buildingName: string | null): FixChannel {
   const b = findBuilding(buildingName);
   if (b?.kind === "dorm") {
-    const housing = byId(offices, "housing")!;
-    return { kind: "link", office: housing, label: "Open housing maintenance request" };
+    return {
+      kind: "link",
+      office: byId(offices, "housing")!,
+      label: "Open housing maintenance form",
+      hint: "Residence halls use the housing maintenance system.",
+    };
   }
   if (b?.kind === "library") {
-    const lib = byId(offices, b.libraryOfficeId);
-    if (lib) return { kind: "link", office: lib, label: "Open the library's report form" };
+    const lib = byId(offices, b.deskOfficeId);
+    if (lib)
+      return {
+        kind: "link",
+        office: lib,
+        label: "Open library problem form",
+        hint: "The library has its own report-a-problem form.",
+      };
   }
   return { kind: "email", office: byId(offices, "facilities")! };
 }
