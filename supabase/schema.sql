@@ -124,7 +124,7 @@ insert into public.offices (id, name, handles, categories, hours, always_open, p
  ('card', 'USF Card Center', 'Lost or found USF ID cards. Found IDs should go here, not on a public list.',
    '{id_card}', '[{"days":[1,2,3,4,5],"open":"08:00","close":"17:00"}]', false, null, null, null, null, 2, false),
  ('lib-tampa', 'Tampa Campus Library Service Desk', 'Items left in the Tampa Campus Library, and library building issues.',
-   '{library}', null, false, null, null, 'https://www.usf.edu/library/', 'Tampa Campus Library, 1st floor', 3, false),
+   '{library}', null, false, '813-974-2729', null, 'https://www.usf.edu/library/', 'Tampa Campus Library, 1st floor', 3, false),
  ('lib-shimberg', 'Shimberg Health Sciences Library Desk', 'Items left in the Shimberg Health Sciences Library, and library building issues.',
    '{library}', null, false, null, null, null, 'Shimberg Health Sciences Library', 4, false),
  ('facilities', 'Facilities Service Center', 'Broken lights, doors, fountains, and furniture in non-residential buildings.',

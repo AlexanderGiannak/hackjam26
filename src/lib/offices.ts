@@ -42,7 +42,7 @@ export const OFFICES: Office[] = [
     handles: "Items left in the Tampa Campus Library, and library building issues.",
     categories: ["library"],
     hours: null,
-    phone: null,
+    phone: "813-974-2729",
     email: null,
     url: "https://www.usf.edu/library/",
     location: "Tampa Campus Library, 1st floor",
