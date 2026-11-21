@@ -5,7 +5,8 @@ import type { Office } from "./types";
  * The app reads from Supabase when configured and falls back to this list.
  *
  * Phone numbers checked against official USF pages on 2026-11-21 (source URL above each row).
- * verified=true only when phone AND hours are confirmed. Library rows still need hours.
+ * verified=true only when phone AND hours are confirmed. Library hours are the regular Fall 2026 week
+ * from LibCal; check again if the semester schedule changes.
  * Do not guess contact details.
  */
 export const OFFICES: Office[] = [
@@ -39,32 +40,46 @@ export const OFFICES: Office[] = [
     verified: true,
   },
   {
-    // https://lib.usf.edu/services/lost-and-found/  (hours still to confirm)
+    // https://lib.usf.edu/services/lost-and-found/
+    // Hours: https://calendar.lib.usf.edu/hours (LibCal "Tampa campus", Fall 2026 regular week, checked 2026-11-21).
+    // Closed Thanksgiving Thu-Fri (Nov 26-27). After 8:45pm entry is USF ID only.
     id: "lib-tampa",
     name: "Tampa Campus Library Service Desk",
     handles: "Items left in the Tampa Campus Library (held 30 days), and library building issues.",
     categories: ["library"],
-    hours: null,
+    hours: [
+      { days: [0], open: "10:00", close: "02:00" },
+      { days: [1, 2, 3, 4], open: "07:00", close: "02:00" },
+      { days: [5], open: "07:00", close: "20:00" },
+      { days: [6], open: "10:00", close: "20:00" },
+    ],
     phone: "813-974-2729",
     email: null,
     url: "https://lib.usf.edu/forms/report-a-problem/",
     location: "4101 USF Apple Dr, 1st floor",
     sort_order: 3,
-    verified: false,
+    verified: true,
   },
   {
-    // https://libraries.health.usf.edu/about/shimberg  (hours still to confirm)
+    // https://libraries.health.usf.edu/about/shimberg
+    // Hours: https://libraries.health.usf.edu/about/shimberg_hours (LibCal, Fall 2026 regular week, checked 2026-11-21).
+    // Closed Thanksgiving Thu-Fri (Nov 26-27). Entry is USF ID or government photo ID.
     id: "lib-shimberg",
     name: "Shimberg Health Sciences Library Desk",
     handles: "Items left in the Shimberg Health Sciences Library, and library building issues.",
     categories: ["library"],
-    hours: null,
+    hours: [
+      { days: [0], open: "12:00", close: "20:00" },
+      { days: [1, 2, 3, 4], open: "08:00", close: "20:00" },
+      { days: [5], open: "08:00", close: "18:00" },
+      { days: [6], open: "10:00", close: "18:00" },
+    ],
     phone: "813-974-8432",
     email: null,
     url: "https://libraries.health.usf.edu/about/shimberg",
     location: "12908 Bruce B. Downs Blvd",
     sort_order: 4,
-    verified: false,
+    verified: true,
   },
   {
     // https://www.usf.edu/facilities/service-center/contact-us.aspx

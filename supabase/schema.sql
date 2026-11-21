@@ -117,7 +117,7 @@ create policy "public read photos" on storage.objects for select
   using (bucket_id = 'photos');
 
 -- ---------- Seed offices: phones checked against official USF pages 2026-11-21 (see src/lib/offices.ts for sources) ----------
--- Library rows stay verified = false until their hours are confirmed.
+-- Library hours: regular Fall 2026 week from USF LibCal (checked 2026-11-21). Windows with close <= open run past midnight.
 insert into public.offices (id, name, handles, categories, hours, always_open, phone, email, url, location, sort_order, verified) values
  ('upd', 'USF Police (Lost & Found)', 'Lost and found property, especially valuables like phones, wallets, and laptops. Emergencies: call 911.',
    '{phone,wallet,laptop,keys,bag,valuables,other}', null, true, '813-974-2628', null,
@@ -126,9 +126,11 @@ insert into public.offices (id, name, handles, categories, hours, always_open, p
    '{id_card}', '[{"days":[1,2,3,4,5],"open":"09:00","close":"17:00"}]', false, '813-974-4357', 'help@usf.edu',
    'https://www.usf.edu/it/resources/usf-card', 'Tampa Campus Library', 2, true),
  ('lib-tampa', 'Tampa Campus Library Service Desk', 'Items left in the Tampa Campus Library (held 30 days), and library building issues.',
-   '{library}', null, false, '813-974-2729', null, 'https://lib.usf.edu/forms/report-a-problem/', '4101 USF Apple Dr, 1st floor', 3, false),
+   '{library}', '[{"days":[0],"open":"10:00","close":"02:00"},{"days":[1,2,3,4],"open":"07:00","close":"02:00"},{"days":[5],"open":"07:00","close":"20:00"},{"days":[6],"open":"10:00","close":"20:00"}]',
+   false, '813-974-2729', null, 'https://lib.usf.edu/forms/report-a-problem/', '4101 USF Apple Dr, 1st floor', 3, true),
  ('lib-shimberg', 'Shimberg Health Sciences Library Desk', 'Items left in the Shimberg Health Sciences Library, and library building issues.',
-   '{library}', null, false, '813-974-8432', null, 'https://libraries.health.usf.edu/about/shimberg', '12908 Bruce B. Downs Blvd', 4, false),
+   '{library}', '[{"days":[0],"open":"12:00","close":"20:00"},{"days":[1,2,3,4],"open":"08:00","close":"20:00"},{"days":[5],"open":"08:00","close":"18:00"},{"days":[6],"open":"10:00","close":"18:00"}]',
+   false, '813-974-8432', null, 'https://libraries.health.usf.edu/about/shimberg', '12908 Bruce B. Downs Blvd', 4, true),
  ('facilities', 'Facilities Service Center', 'Broken lights, doors, fountains, and furniture in non-residential buildings. After-hours emergencies: 813-974-2845 (24/7).',
    '{facilities,lighting,fountain,door,furniture,other}', '[{"days":[1,2,3,4,5],"open":"08:00","close":"17:00"}]', false,
    '813-974-2750', 'FM-ServiceCenter@usf.edu', 'https://www.usf.edu/facilities/service-center/contact-us.aspx',
