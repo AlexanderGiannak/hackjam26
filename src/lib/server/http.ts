@@ -17,7 +17,7 @@ export async function handle(fn: (repo: SupabaseRepo) => Promise<Response>): Pro
   const repo = repoOrNull();
   if (!repo) {
     return json(
-      { error: "Server storage is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or run without NEXT_PUBLIC_SUPABASE_URL for demo mode." },
+      { error: "Server storage is not configured. Set SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY), or run without NEXT_PUBLIC_SUPABASE_URL for demo mode." },
       503,
     );
   }

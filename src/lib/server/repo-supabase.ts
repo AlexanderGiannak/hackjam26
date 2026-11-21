@@ -7,7 +7,8 @@ import type { StoredReport } from "../types";
  * Row Level Security is on with no anon policies, so the public anon key can read and write nothing.
  */
 const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Either the new secret key (sb_secret_...) or the legacy service_role key. Server-only, never NEXT_PUBLIC_.
+const serviceKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const db: SupabaseClient | null =
   url && serviceKey ? createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
