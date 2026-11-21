@@ -231,7 +231,7 @@ export function BuildingSelect({
 
 const BLURBS: Record<string, string> = {
   LIB: "Main library",
-  MDL: "Health sciences library",
+  MDC: "Health sciences library",
   MSC: "Student center, food court",
   REC: "Gym, pools, courts",
   BSN: "Business college",
@@ -255,10 +255,10 @@ const PHOTOS = new Set([
   // USF photos (Housing, USF News)
   "BEA", "BET", "CAS", "CYP", "END", "HOR", "JUN", "MAP", "PIN", "POP", "SUM", "HOL", "KOS",
   "GRK", "HON",
+  // USF campus map photos (gis.usf.edu building footprints, Image_URL)
+  "CPR", "SOC", "MDC",
   // Wikimedia Commons photos
   "LIB", "MSC", "REC", "BSN", "ENB", "ISA", "CIS",
-  // pinned OpenStreetMap snapshots until someone takes a photo
-  "MDL", "CPR", "SOC",
 ]);
 
 function BuildingTile({ b, small }: { b: Building; small?: boolean }) {

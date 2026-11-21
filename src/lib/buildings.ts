@@ -18,7 +18,7 @@ export interface Building {
 
 export const BUILDINGS: Building[] = [
   { code: "LIB", name: "Tampa Campus Library", kind: "library", lat: 28.0596, lng: -82.4122, deskOfficeId: "lib-tampa" },
-  { code: "MDL", name: "Shimberg Health Sciences Library", kind: "library", lat: 28.0638, lng: -82.4251, deskOfficeId: "lib-shimberg" },
+  { code: "MDC", name: "Shimberg Health Sciences Library", kind: "library", lat: 28.0638, lng: -82.4251, deskOfficeId: "lib-shimberg" },
   { code: "MSC", name: "Marshall Student Center", kind: "student_life", lat: 28.0637, lng: -82.4134, deskOfficeId: "msc" },
   { code: "REC", name: "Campus Recreation Center", kind: "student_life", lat: 28.0603, lng: -82.4075 },
   { code: "BSN", name: "Muma College of Business", kind: "academic", lat: 28.0583, lng: -82.4098 },
@@ -52,7 +52,7 @@ export const BUILDINGS: Building[] = [
  */
 export const BUILDING_TERMS: Record<string, string> = {
   LIB: "main library, books, study, study rooms, quiet, computers, printing, USF Card Center, ID card",
-  MDL: "health sciences library, medical library, medicine, nursing, public health, USF Health, study",
+  MDC: "health sciences library, Morsani College of Medicine, MDL, medical library, medicine, nursing, public health, USF Health, study",
   MSC: "Marshall Center, student union, food court, dining, food, eat, lunch, coffee, bookstore, textbooks, events, ballroom, information desk",
   REC: "rec, gym, fitness, workout, weights, lift, exercise, pool, swim, basketball, courts",
   BSN: "business, Muma, business administration, accounting, finance, marketing, management",
