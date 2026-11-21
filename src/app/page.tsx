@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { CameraIcon, SearchIcon, TrayIcon } from "@/components/Icons";
+import { BoxIcon, CameraIcon, ChevronRight, SearchIcon, TrayIcon } from "@/components/Icons";
 import { CampusNow, FoundWaiting } from "@/components/CampusNow";
 import { APP_NAME } from "@/lib/brand";
 
-/** Home, from HackJam Wireframes V2: one big "Snap & report", two smaller paths, and the campus right now. */
+/** Home, from HackJam Wireframes V2: one big "Snap & report", the lost and found paths, and the campus right now. */
 export default function Home() {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-8">
@@ -40,19 +40,33 @@ export default function Home() {
             <span className="mt-3 block text-lg font-bold">I lost something</span>
             <span className="mt-1 block text-sm text-muted">No photo needed. Get alerted on a match.</span>
           </Link>
-          <Link href="/browse?type=found" className="rounded-3xl border border-line bg-white p-4 transition hover:border-ink/30 active:scale-[0.99] sm:p-5">
+          <Link href="/found" className="rounded-3xl border border-line bg-white p-4 transition hover:border-ink/30 active:scale-[0.99] sm:p-5">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-canvas">
-              <TrayIcon className="h-5 w-5" />
+              <BoxIcon className="h-5 w-5" />
             </span>
-            <span className="mt-3 block text-lg font-bold">Found items</span>
-            <span className="mt-1 block text-sm text-muted">
-              <FoundWaiting />
-            </span>
+            <span className="mt-3 block text-lg font-bold">I found something</span>
+            <span className="mt-1 block text-sm text-muted">Snap it. We show you where to turn it in.</span>
           </Link>
         </div>
 
+        <Link
+          href="/browse?type=found"
+          className="flex items-center gap-4 rounded-3xl border border-line bg-white p-4 transition hover:border-ink/30 active:scale-[0.99]"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-canvas">
+            <TrayIcon className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">Found items</span>
+            <span className="block text-sm text-muted">
+              <FoundWaiting />
+            </span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-muted" />
+        </Link>
+
         <p className="hidden pt-2 text-sm text-muted lg:block">
-          Found something? <Link href="/found" className="link">Post it here</Link>. Need a phone number?{" "}
+          Need a phone number?{" "}
           <Link href="/contacts" className="link">Tampa lost &amp; found contacts</Link>. Emergency? <a href="tel:911" className="link">Call 911</a>.
         </p>
       </div>
@@ -60,7 +74,7 @@ export default function Home() {
       <CampusNow />
 
       <p className="text-sm text-muted lg:hidden">
-        Found something? <Link href="/found" className="link">Post it here</Link>. Need a phone number?{" "}
+        Need a phone number?{" "}
         <Link href="/contacts" className="link">Tampa lost &amp; found contacts</Link>. Emergency? <a href="tel:911" className="link">Call 911</a>.
       </p>
     </div>

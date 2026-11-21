@@ -55,22 +55,29 @@ function Browse() {
           <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">{tab === "found" ? "Found items" : "Lost items"}</h1>
           <p className="text-[15px] text-muted">
             {tab === "found" ? (
-              <>Waiting for their owners. Found something yourself? <Link href="/found" className="link text-ink">Post it</Link>.</>
+              <>Waiting for their owners.</>
             ) : (
               <>Things students are looking for. Lost something? <Link href="/lost" className="link text-ink">Tell us</Link>.</>
             )}
           </p>
         </div>
-        <div className="flex rounded-full border border-line bg-white p-1 text-sm font-semibold">
-          {(["lost", "found"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => router.replace(t === "lost" ? "/browse" : "/browse?type=found")}
-              className={`rounded-full px-4 py-1.5 capitalize ${tab === t ? "bg-bull text-white" : "text-muted"}`}
-            >
-              {t}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          {tab === "found" && (
+            <Link href="/found" className="rounded-full bg-bull px-4 py-2 text-sm font-semibold text-white hover:bg-bull-dark">
+              + I found something
+            </Link>
+          )}
+          <div className="flex rounded-full border border-line bg-white p-1 text-sm font-semibold">
+            {(["lost", "found"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => router.replace(t === "lost" ? "/browse" : "/browse?type=found")}
+                className={`rounded-full px-4 py-1.5 capitalize ${tab === t ? "bg-bull text-white" : "text-muted"}`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
