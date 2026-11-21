@@ -250,3 +250,14 @@ export function computeStats(rows: Report[], now = Date.now()): Stats {
   const reunited = Math.max(returnedLost, returnedFound);
   return { open, urgent, resolvedThisWeek, reunited, medianHoursToResolve: mid, byOffice };
 }
+
+/**
+ * Staff queue order: urgent first, then by how many students it hits, then by how long it has waited.
+ * Lost/found items rank by age only (they wait for a person, not a crew).
+ */
+export function priorityScore(r: Report, now = Date.now()): number {
+  if (r.status === "resolved") return -1;
+  const hours = (now - new Date(r.created_at).getTime()) / 3_600_000;
+  const people = r.type === "issue" ? 1 + r.me_too_count : 0;
+  return (r.severity === "urgent" ? 1000 : 0) + people * 25 + Math.min(hours, 240);
+}

@@ -134,3 +134,16 @@ describe("stats", () => {
     expect(s.byOffice).toEqual({ facilities: 1 });
   });
 });
+
+describe("staff queue priority", () => {
+  it("urgent beats popular beats old", async () => {
+    const { rep } = await import("./helpers");
+    const now = Date.parse("2026-11-20T12:00:00Z");
+    const urgent = rep({ type: "issue", severity: "urgent", created_at: "2026-11-20T11:00:00Z" });
+    const popular = rep({ type: "issue", me_too_count: 6, created_at: "2026-11-20T10:00:00Z" });
+    const old = rep({ type: "issue", created_at: "2026-11-15T12:00:00Z" });
+    const done = rep({ type: "issue", status: "resolved", severity: "urgent" });
+    const order = [old, done, popular, urgent].sort((a, b) => svc.priorityScore(b, now) - svc.priorityScore(a, now));
+    expect(order).toEqual([urgent, popular, old, done]);
+  });
+});
