@@ -13,11 +13,12 @@ export const OFFICES: Office[] = [
   {
     // https://www.usf.edu/public-safety/university-police/about/contact-up.aspx
     id: "upd",
+    short: "USF Police",
     name: "USF Police (Lost & Found)",
-    handles: "Lost and found property, especially valuables like phones, wallets, and laptops. Emergencies: call 911.",
-    categories: ["phone", "wallet", "laptop", "keys", "bag", "valuables", "other"],
+    handles: "Lost and found property, especially valuables like phones, wallets, and laptops. Dispatch answers 24/7; emergencies: call 911.",
+    categories: ["phone", "wallet", "laptop", "keys", "bag", "valuables", "safety", "other"],
+    // Dispatch answers 24/7, but property pickup hours are not published on the contact page, so no "Open now" badge.
     hours: null,
-    always_open: true,
     phone: "813-974-2628",
     email: null,
     url: "https://www.usf.edu/public-safety/university-police/about/contact-up.aspx",
@@ -28,6 +29,7 @@ export const OFFICES: Office[] = [
   {
     // https://www.usf.edu/it/resources/usf-card
     id: "card",
+    short: "Card Center",
     name: "USF Card Center",
     handles: "Lost or found USF ID cards. Found IDs should go here, not on a public list.",
     categories: ["id_card"],
@@ -44,6 +46,7 @@ export const OFFICES: Office[] = [
     // Hours: https://calendar.lib.usf.edu/hours (LibCal "Tampa campus", Fall 2026 regular week, checked 2026-11-21).
     // Closed Thanksgiving Thu-Fri (Nov 26-27). After 8:45pm entry is USF ID only.
     id: "lib-tampa",
+    short: "Tampa Library",
     name: "Tampa Campus Library Service Desk",
     handles: "Items left in the Tampa Campus Library (held 30 days), and library building issues.",
     categories: ["library"],
@@ -65,6 +68,7 @@ export const OFFICES: Office[] = [
     // Hours: https://libraries.health.usf.edu/about/shimberg_hours (LibCal, Fall 2026 regular week, checked 2026-11-21).
     // Closed Thanksgiving Thu-Fri (Nov 26-27). Entry is USF ID or government photo ID.
     id: "lib-shimberg",
+    short: "Shimberg Library",
     name: "Shimberg Health Sciences Library Desk",
     handles: "Items left in the Shimberg Health Sciences Library, and library building issues.",
     categories: ["library"],
@@ -84,10 +88,11 @@ export const OFFICES: Office[] = [
   {
     // https://www.usf.edu/facilities/service-center/contact-us.aspx
     id: "facilities",
+    short: "Facilities",
     name: "Facilities Service Center",
     handles:
       "Broken lights, doors, fountains, and furniture in non-residential buildings. After-hours emergencies: 813-974-2845 (24/7).",
-    categories: ["facilities", "lighting", "fountain", "door", "furniture", "other"],
+    categories: ["facilities", "lighting", "water", "door", "elevator", "furniture", "restroom", "trash", "road", "other"],
     hours: [{ days: [1, 2, 3, 4, 5], open: "08:00", close: "17:00" }],
     phone: "813-974-2750",
     email: "FM-ServiceCenter@usf.edu",
@@ -99,6 +104,7 @@ export const OFFICES: Office[] = [
   {
     // https://www.usf.edu/housing/residential-experience/resident-services/maintenance-requests.aspx
     id: "housing",
+    short: "Housing",
     name: "Housing & Residential Education Maintenance",
     handles:
       "Maintenance problems in residence halls. USF Village residents call 813-974-0764. After hours, contact your RA on duty.",
@@ -111,4 +117,24 @@ export const OFFICES: Office[] = [
     sort_order: 6,
     verified: true,
   },
+  {
+    // https://www.usf.edu/parking/about-us/contact-us.aspx (checked 2026-11-21). Hours not listed there yet.
+    id: "pats",
+    short: "Parking (PATS)",
+    name: "Parking & Transportation Services",
+    handles:
+      "Cars parked illegally or blocking lanes, ramps, or fire lanes; broken gates and pay stations in lots and garages.",
+    categories: ["parking"],
+    hours: null,
+    phone: "813-974-3990",
+    email: "psweb@usf.edu",
+    url: "https://www.usf.edu/parking/about-us/contact-us.aspx",
+    location: "13311 USF Plum Drive (Parking & Transportation Building)",
+    sort_order: 7,
+    verified: false,
+  },
 ];
+
+export function officeById(id: string | null | undefined, offices: Office[] = OFFICES): Office | undefined {
+  return id ? offices.find((o) => o.id === id) : undefined;
+}
