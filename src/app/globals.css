@@ -12,11 +12,12 @@
   --color-tint: #f8f8f6;
   --color-gold: #cfc493;
   --color-gold-light: #f4f1e3;
-  /* gold from the Fix My Uni logo */
+  /* gold from the FixMyUni logo */
   --color-sun: #d4a541;
   --color-sun-dark: #c2932f;
   --color-bull-light: #e6f1ec;
   --font-sans: var(--font-inter);
+  --font-display: var(--font-nunito);
 }
 
 :root {
@@ -63,7 +64,7 @@ body {
   @apply font-medium underline underline-offset-2;
 }
 
-/* ---- Fix My Uni additions: map pin, loading shimmer, toasts ---- */
+/* ---- FixMyUni additions: map pin, loading shimmer, toasts ---- */
 .bh-pin {
   width: 34px;
   height: 44px;

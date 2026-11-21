@@ -1,5 +1,5 @@
 /**
- * Fix My Uni data model.
+ * FixMyUni data model.
  *
  * One `Report` covers everything a student can snap on campus:
  * - `lost` / `found`: personal items, matched against each other.
@@ -129,6 +129,8 @@ export interface ReportEvent {
   by: "reporter" | "staff" | "system";
   /** Only the reporter and USF staff see it (e.g. an owner's proof answer). Stripped by publicView. */
   private?: boolean;
+  /** the other report this event is about (a claim links the lost and the found report) */
+  ref?: string;
 }
 
 /** A report as stored server-side. `owner_token` never leaves the server except once, to the reporter. */

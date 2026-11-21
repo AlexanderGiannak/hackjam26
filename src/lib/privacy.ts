@@ -27,7 +27,10 @@ export function withoutToken(r: StoredReport): Report {
 export function publicView(r: StoredReport | Report): Report | null {
   const base = "owner_token" in r ? withoutToken(r as StoredReport) : (r as Report);
   if (base.visibility === "private") return null;
-  const events = base.events.filter((e) => !e.private);
+  // Where a found item is held is shown only after someone claims it (to them, privately), never publicly.
+  const events = base.events
+    .filter((e) => !e.private)
+    .map((e) => (base.type === "found" && e.status === "routed" ? { ...e, note: "Turned in at a campus desk" } : e));
   if (base.type === "issue") return { ...base, events };
   return {
     ...base,

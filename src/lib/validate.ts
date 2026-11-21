@@ -50,6 +50,16 @@ export const StatusChangeSchema = z.object({
 export const ClaimSchema = z.object({
   found_id: z.string().trim().min(1).max(64),
   answer: text(280).default(""),
+  /** where the finder should drop it (office id, or "other" with the place in `note`) */
+  desk: text(40).optional(),
+  note: text(200).default(""),
+});
+
+export const DeskCheckInSchema = z.object({
+  action: z.enum(["confirm", "mismatch"]),
+  tag: text(40).default(""),
+  shelf: text(60).default(""),
+  hold_until: text(40).default(""),
 });
 
 export class ValidationError extends Error {

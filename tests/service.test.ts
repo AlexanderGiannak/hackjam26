@@ -176,12 +176,17 @@ describe("claimMatch", () => {
     const found = await svc.createReport(repo, input({ type: "found", category: "bottle", color: "black", building: "Marshall Student Center" }), ["data:image/jpeg;base64,x"]);
     return { repo, lost, found };
   }
-  it("asks the finder to drop it at the right desk and keeps the proof private", async () => {
+  it("asks the finder (privately) to drop it at the desk the owner picked, and keeps the proof private", async () => {
     const { repo, lost, found } = await pair();
-    const r = await svc.claimMatch(repo, lost.report.id, { found_id: found.report.id, answer: "Green sticker on the bottom" }, owner(lost.token));
-    expect(r.desk).toBe("MSC Information Desk");
+    const r = await svc.claimMatch(repo, lost.report.id, { found_id: found.report.id, answer: "Green sticker on the bottom", desk: "lib-tampa", note: "Before 5 pm please" }, owner(lost.token));
+    expect(r.desk).toBe("Tampa Campus Library Service Desk");
+    expect(r.turnedIn).toBe(false);
     expect(r.lost.status).toBe("in_progress");
-    expect(r.found.events.at(-1)?.note).toMatch(/drop it at MSC Information Desk/);
+    // the finder sees the request and the note; other students don't
+    const finder = await svc.getReport(repo, found.report.id, owner(found.token));
+    expect(finder.report.events.at(-1)?.note).toMatch(/drop it at Tampa Campus Library Service Desk\. Their note: Before 5 pm/);
+    const pubFound = await svc.getReport(repo, found.report.id, anyone);
+    expect(JSON.stringify(pubFound.report)).not.toContain("Before 5 pm");
     // the owner and staff see the proof, other students never do
     const mine = await svc.getReport(repo, lost.report.id, owner(lost.token));
     expect(mine.report.events.some((e) => e.private && e.note.includes("Green sticker"))).toBe(true);
@@ -195,9 +200,40 @@ describe("claimMatch", () => {
     await expect(svc.claimMatch(repo, lost.report.id, { found_id: found.report.id }, anyone)).rejects.toThrow(/Only the person/);
     await expect(svc.claimMatch(repo, lost.report.id, { found_id: found.report.id }, owner(found.token))).rejects.toThrow(/Only the person/);
   });
-  it("refuses a found post that doesn't match", async () => {
+  it("lets you claim an item that isn't a match only with a proof answer", async () => {
     const { repo, lost } = await pair();
     const other = await svc.createReport(repo, input({ type: "found", category: "laptop", color: "silver", building: "Cooper Hall" }), ["data:image/jpeg;base64,x"]);
-    await expect(svc.claimMatch(repo, lost.report.id, { found_id: other.report.id }, owner(lost.token))).rejects.toThrow(/doesn't match/);
+    await expect(svc.claimMatch(repo, lost.report.id, { found_id: other.report.id }, owner(lost.token))).rejects.toThrow(/only the owner would know/);
+    const r = await svc.claimMatch(repo, lost.report.id, { found_id: other.report.id, answer: "Dent on the lid" }, owner(lost.token));
+    expect(r.lost.status).toBe("in_progress");
+  });
+});
+
+describe("turn-in, drop-off code and desk check-in", () => {
+  it("hides where a found item is held until it is claimed, then tells only the owner", async () => {
+    const repo = new MemoryRepo();
+    const lost = await svc.createReport(repo, input({ type: "lost", category: "bottle", color: "black", building: "Marshall Student Center" }), []);
+    const found = await svc.createReport(repo, input({ type: "found", category: "bottle", color: "black", building: "Marshall Student Center" }), ["data:image/jpeg;base64,x"]);
+    await svc.changeStatus(repo, found.report.id, { status: "routed", note: "Turned in at MSC Information Desk." }, owner(found.token));
+    const pub = await svc.getReport(repo, found.report.id, anyone);
+    expect(JSON.stringify(pub.report)).not.toContain("MSC Information Desk");
+    // the finder gets a drop-off code; nobody else sees it
+    const finder = await svc.getReport(repo, found.report.id, owner(found.token));
+    const code = svc.dropCodeOf(finder.report);
+    expect(code).toMatch(/^[A-Z2-9]{4}$/);
+    expect(JSON.stringify(pub.report)).not.toContain(code!);
+    // claiming reveals the desk to the owner
+    const r = await svc.claimMatch(repo, lost.report.id, { found_id: found.report.id }, owner(lost.token));
+    expect(r.turnedIn).toBe(true);
+    expect(r.desk).toBe("MSC Information Desk");
+    // desk staff check it in by code; the owner hears where it is, privately
+    await expect(svc.findByDropCode(repo, code!, anyone)).rejects.toThrow(/Desk staff/);
+    const hit = await svc.findByDropCode(repo, code!.toLowerCase(), staff);
+    expect(hit.report.id).toBe(found.report.id);
+    await svc.deskCheckIn(repo, found.report.id, { action: "confirm", tag: "MSC-0142", shelf: "Lost & found bin 2", hold_until: "Dec 21, 2026" }, staff);
+    const owned = await svc.getReport(repo, lost.report.id, owner(lost.token));
+    expect(owned.report.events.at(-1)?.note).toMatch(/MSC Information Desk \(tag MSC-0142\), held until Dec 21, 2026/);
+    const pubAfter = await svc.getReport(repo, found.report.id, anyone);
+    expect(JSON.stringify(pubAfter.report)).not.toContain("MSC-0142");
   });
 });

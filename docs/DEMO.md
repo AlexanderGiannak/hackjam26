@@ -19,7 +19,7 @@ Fallback if Wi-Fi dies: one laptop in demo mode with two tabs (alerts work acros
 | 2:05 | Phone A | Pop-up: *Possible match! 🎉* → open it: match score and the reason, then who to ask, in order | "Within seconds, the owner knows, and why it matched." |
 | 2:20 | Phone B | **Report a problem** → photo of a car across a ramp (your own car) → tap the lot on the map | "Parking goes privately to Parking & Transportation. Faces and plates are blurred on the phone, and parking reports are never public." |
 | 2:35 | Projector | README: "Every claim has a test", the real-photo table, Honest boundaries | "59 tests, and the AI measured on our own campus photos. And here's what it doesn't do yet." |
-| 2:50 | – | – | "Fix My Uni. See it, snap it, USF hears it." |
+| 2:50 | – | – | "FixMyUni. See it, snap it, USF hears it." |
 
 **Judge questions to be ready for**
 

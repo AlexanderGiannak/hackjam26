@@ -338,13 +338,13 @@ export function ItemFlow({ type }: { type: Kind }) {
               />
               <AutofillBanner auto={auto} onUndo={auto.count ? undoAutofill : undefined} />
               <button type="button" onClick={() => setDescribe((d) => !d)} className="link mt-4 block text-[15px] text-bull">
-                {describe ? "Hide description" : lost ? "No photo? Describe it instead" : "Add a description (optional)"}
+                {describe ? "Hide details" : lost ? "Or type what it looks like" : "Add a description (optional)"}
               </button>
               {describe && (
                 <div className="mt-4 space-y-4">
                   <div>
                     <label className="label" htmlFor="details">
-                      Describe it
+                      What does it look like?
                       {autoFields.has("details") && <AutoTag />}
                     </label>
                     <textarea

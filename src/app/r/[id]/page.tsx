@@ -10,10 +10,11 @@ import { OfficeCard } from "@/components/OfficeCard";
 import { ReportThumb, timeAgo } from "@/components/ReportCard";
 import { StatusSteps, StatusTimeline } from "@/components/StatusTimeline";
 import { dismiss, dismissed, following, getReport, matchesFor, meToo, setStatus } from "@/lib/client";
+import { dropCodeOf } from "@/lib/service";
 import { placeLabel } from "@/lib/geo";
 import { buildIssueEmail } from "@/lib/mail";
 import type { Match } from "@/lib/matching";
-import { OFFICES } from "@/lib/offices";
+import { officeById, OFFICES } from "@/lib/offices";
 import { foundDropoff, issueChannel, lostChecklist, type Step } from "@/lib/routing";
 import { reportTitle, statusLabel, type Report, type Status } from "@/lib/types";
 
@@ -34,8 +35,8 @@ function turnedInAt(r: Report): string | null {
 const BANNER = {
   lost: ["Saved. We're watching for it", "Keep this page: it updates live, and you'll get a pop-up the moment someone posts a match."],
   found: ["Posted. Thank you!", "This page updates live. It's saved under Mine, so you can check back anytime."],
-  turned: ["Turned in. Thank you!", "We told the owner where to pick it up. This page updates if they claim it."],
-  claimed: ["Claim sent", "We told the finder where to leave it. Bring your USF ID when you pick it up."],
+  turned: ["Turned in. Thank you!", "Show the drop-off code below at the desk. The owner sees which desk only after they claim it."],
+  claimed: ["Claim sent", "Where to pick it up is below, and it updates when the desk checks it in. Bring your USF ID."],
 };
 
 function ReportPage() {
@@ -89,7 +90,7 @@ function ReportPage() {
   async function share() {
     const url = location.origin + `/r/${report!.id}`;
     try {
-      if (navigator.share) await navigator.share({ title: `Fix My Uni: ${reportTitle(report!)}`, url });
+      if (navigator.share) await navigator.share({ title: `FixMyUni: ${reportTitle(report!)}`, url });
       else {
         await navigator.clipboard.writeText(url);
         setCopied(true);
@@ -108,7 +109,8 @@ function ReportPage() {
   const pinColor = report.type === "issue" ? (report.severity === "urgent" ? TYPE_COLORS.urgent : TYPE_COLORS.issue) : TYPE_COLORS[report.type];
   const issueCh = report.type === "issue" ? issueChannel(OFFICES, report.issue_type, report.building) : null;
   const drop = report.type === "found" ? foundDropoff(OFFICES, report.category, report.building) : null;
-  const deskName = report.type === "found" ? (turnedInAt(report) ?? drop!.office.name) : "";
+  // Where a found item is held is only for the finder (and, after a claim, the owner on their own report).
+  const deskName = report.type === "found" ? (owner ? (turnedInAt(report) ?? drop!.office.name) : "a campus desk") : "";
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -121,7 +123,7 @@ function ReportPage() {
       )}
       {report.type === "issue" && q.get("new") === "1" && issueCh && (
         <div className="pop-in rounded-2xl bg-bull p-5 text-white">
-          <p className="text-xl font-bold">Saved to Fix My Uni</p>
+          <p className="text-xl font-bold">Saved to FixMyUni</p>
           <p className="mt-1 text-white/90">Your report is saved under Mine and assigned to {issueCh.office.short}. Saving here does not send it to the office: finish sending your email, submitting their form, or calling them.</p>
         </div>
       )}
@@ -274,8 +276,24 @@ function LostView({
     steps.splice(0, steps.length, { office: d.office, why }, ...steps.filter((s) => s.office.id !== d.office.id));
   }
   const closed = report.status === "resolved";
+  const pickup = owner ? [...report.events].reverse().find((e) => e.private && e.ref) : undefined;
   return (
     <>
+      {pickup && !closed && (
+        <div className="rounded-2xl border-[1.5px] border-bull bg-bull-soft/50 p-4 text-[15px]">
+          <p className="font-bold">Where to get it</p>
+          <p>{pickup.note}</p>
+        </div>
+      )}
+      {owner && !closed && (
+        <Link href={`/r/${report.id}/found-by-others`} className="flex items-center justify-between rounded-2xl bg-ink p-4 text-white">
+          <span>
+            <span className="block font-bold">Found by others</span>
+            <span className="block text-sm text-white/80">Browse what other students turned in. Desks show after you claim.</span>
+          </span>
+          <span aria-hidden className="text-xl">→</span>
+        </Link>
+      )}
       <section>
         <h2 className="mb-3 text-xl font-bold">Possible matches {matches?.length ? `(${matches.length})` : ""}</h2>
         {!matches ? (
@@ -290,9 +308,9 @@ function LostView({
                 m={m}
                 note="Ask for it at the office it was turned in to, and describe what makes it yours."
                 actions={
-                  owner && !closed ? (
+                  owner && !closed && !report.events.some((e) => e.ref === m.report.id) ? (
                     <>
-                      <Link href={`/r/${report.id}/claim?found=${m.report.id}`} className="btn-primary flex-1">This is mine: claim it</Link>
+                      <Link href={`/r/${report.id}/claim?found=${m.report.id}`} className="btn-primary flex-1">This might be mine</Link>
                       <button type="button" onClick={() => onDismiss(m.report.id)} className="btn-ghost">Not mine</button>
                     </>
                   ) : undefined
@@ -325,7 +343,9 @@ function FoundView({ report, matches, owner, desk, drop }: { report: Report; mat
   const best = matches?.[0];
   const known = OFFICES.find((o) => o.name === desk);
   const office = known ?? drop.office;
-  const ask = !turnedIn && [...report.events].reverse().find((e) => e.status === "in_progress" && e.by === "system");
+  const ask = [...report.events].reverse().find((e) => e.status === "in_progress" && e.by === "system" && e.private);
+  const code = dropCodeOf(report);
+  const upd = officeById("upd")!;
   return (
     <>
       {owner && ask && (
@@ -333,33 +353,56 @@ function FoundView({ report, matches, owner, desk, drop }: { report: Report; mat
           <strong>The owner found your post!</strong> {ask.note.replace(/^The owner claimed it\. /, "")}
         </div>
       )}
-      {best && !hideMatch && report.visibility === "public" && (
+      {owner && turnedIn && code && (
+        <div className="rounded-2xl border-[1.5px] border-bull bg-white p-4 text-center">
+          <p className="text-sm font-semibold uppercase tracking-wider text-muted">Drop-off code</p>
+          <p className="font-display text-5xl font-black tracking-[0.2em] text-bull">{code}</p>
+          <p className="mt-1 text-sm text-muted">Show this at the desk so they can check it in. Only you and USF staff see it.</p>
+        </div>
+      )}
+      {owner && best && !hideMatch && report.visibility === "public" && (
         <div className="pop-in relative rounded-2xl border-[1.5px] border-bull bg-white p-4 shadow-sm">
           <button type="button" onClick={() => setHideMatch(true)} className="absolute right-3 top-3 text-muted" aria-label="Hide">
             <XIcon />
           </button>
           <p className="text-lg font-bold">Possible match!</p>
           <p className="mt-1 pr-6 text-[15px]">
-            Someone posted a lost {reportTitle(best.report).toLowerCase()}. {best.reason.replace(/^Same/, "Same")}
+            Someone posted a lost {reportTitle(best.report).toLowerCase()}. {best.reason}
           </p>
           <Link href={`/r/${best.report.id}`} className="link mt-2 inline-block text-bull">Open their report</Link>
         </div>
       )}
-      <section>
-        <h2 className="mb-3 text-xl font-bold">{turnedIn ? "Where it is now" : "Where to turn it in"}</h2>
-        {turnedIn && !known ? (
-          <div className="rounded-2xl border border-line bg-white p-4 text-[15px]">Left at: <strong>{desk}</strong></div>
-        ) : (
-          <OfficeCard office={office} step={1} why={turnedIn ? `Left at ${desk}.` : drop.why} />
-        )}
-        {owner && !turnedIn && report.status !== "resolved" && (
-          <>
-            <Link href={`/r/${report.id}/turn-in`} className="btn-ghost mt-3 w-full border-bull text-bull">I turned it in</Link>
-            <p className="mt-2 text-center text-sm text-muted">Optional: add a note so the owner knows exactly where to go.</p>
-          </>
-        )}
-      </section>
-      {report.visibility === "public" && matches && matches.length > 1 && (
+      {owner ? (
+        <section>
+          <h2 className="text-xl font-bold">{turnedIn ? "Where you left it" : "Where to turn it in"}</h2>
+          {!turnedIn && <p className="mb-3 text-[15px] text-muted">Where did you find it? The desks below change with the building.</p>}
+          <div className={`space-y-3 ${turnedIn ? "mt-3" : ""}`}>
+            {turnedIn && !known ? (
+              <div className="rounded-2xl border border-line bg-white p-4 text-[15px]">Left at: <strong>{desk}</strong></div>
+            ) : (
+              <OfficeCard office={office} step={turnedIn ? undefined : 1} why={turnedIn ? `Left at ${desk}.` : drop.why} />
+            )}
+            {!turnedIn && office.id !== "upd" && <OfficeCard office={upd} step={2} why="Valuables, and anything you find after hours." />}
+          </div>
+          {!turnedIn && report.status !== "resolved" && (
+            <>
+              <Link href={`/r/${report.id}/turn-in`} className="btn-ghost mt-3 w-full border-bull text-bull">I turned it in</Link>
+              <p className="mt-2 text-center text-sm text-muted">You&apos;ll get a code to show at the desk.</p>
+            </>
+          )}
+        </section>
+      ) : (
+        report.status !== "resolved" && (
+          <section className="rounded-2xl border border-line bg-white p-4">
+            <h2 className="text-lg font-bold">Is this yours?</h2>
+            <p className="text-[15px] text-muted">
+              {turnedIn ? "It's at a USF desk. Which desk shows after you claim it." : "The finder still has it."} Report it lost, then claim it from your report.
+            </p>
+            <Link href={`/lost?for=${report.id}`} className="btn-primary mt-3 w-full">This might be mine</Link>
+          </section>
+        )
+      )}
+      {owner && report.visibility === "public" && matches && matches.length > 1 && (
         <section>
           <h2 className="mb-3 text-xl font-bold">Other possible owners ({matches.length - 1})</h2>
           <div className="space-y-3">

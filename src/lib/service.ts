@@ -6,7 +6,7 @@ import { OFFICES } from "./offices";
 import { publicView, visibilityFor, withoutToken } from "./privacy";
 import { assignOffice, foundDropoff } from "./routing";
 import { STATUSES, type IssueType, type Report, type ReportEvent, type Status, type StoredReport } from "./types";
-import { ClaimSchema, parseNewReport, StatusChangeSchema, validatePhotoCount, ValidationError } from "./validate";
+import { ClaimSchema, DeskCheckInSchema, parseNewReport, StatusChangeSchema, validatePhotoCount, ValidationError } from "./validate";
 
 /**
  * Business rules, shared by both backends:
@@ -189,20 +189,51 @@ export async function changeStatus(repo: Repo, id: string, input: unknown, actor
   }
   const at = new Date().toISOString();
   const events = [...r.events, event(status, note || defaultNote(r, status, staff), staff ? "staff" : "reporter", at)];
+  // A finder marking it turned in gets a code to show at the desk (private: only the finder and staff see it).
+  if (r.type === "found" && status === "routed" && !staff && !dropCodeOf(r)) {
+    events.push({ ...event("routed", `Drop-off code: ${dropCode()}. Show it at the desk.`, "system", at), private: true });
+  }
   await repo.update(id, { status, events, updated_at: at });
   return withoutToken({ ...r, status, events, updated_at: at });
 }
 
+/** Desk named in the finder's "Turned in at X." note (owner-side event), if any. */
+export function turnedInDesk(r: Pick<Report, "events">): string | null {
+  const e = [...r.events].reverse().find((x) => x.status === "routed" && x.by === "reporter");
+  return e?.note.match(/^Turned in at (.+?)(?:\.|$)/)?.[1] ?? null;
+}
+
+/** Short code a finder shows at the desk (no 0/O/1/I, so it reads cleanly aloud). */
+function dropCode(): string {
+  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const b = new Uint8Array(4);
+  crypto.getRandomValues(b);
+  return Array.from(b, (x) => A[x % A.length]).join("");
+}
+export function dropCodeOf(r: Pick<Report, "events">): string | null {
+  for (const e of [...r.events].reverse()) {
+    const m = e.private && e.note.match(/^Drop-off code: ([A-Z0-9]{4})/);
+    if (m) return m[1];
+  }
+  return null;
+}
+
 /**
- * "This is mine: claim it" (V2 claim screen). The owner of a lost report claims a found post that matches it.
- * - The found post's finder is asked to leave it at the right desk (or told the owner is coming, if it is there already).
- * - The owner's proof answer ("what's on it that you can't see in the photo") is kept on the lost report as a private
- *   event: only the owner and USF staff see it, so nobody can copy it to claim someone else's things.
+ * The owner of a lost report claims a found post (V3 "This might be mine" / "Ask the finder to drop it off").
+ * - Finder still has it: the owner picks the desk and can leave a note; only the finder (and staff) see the request.
+ * - Already turned in: the desk is revealed to the owner only, privately.
+ * - The proof answer ("what's on it that you can't see in the photo") is private to the owner and USF staff, and
+ *   is required when the item isn't one of the owner's matches.
  */
-export async function claimMatch(repo: Repo, lostId: string, input: unknown, actor: Actor): Promise<{ lost: Report; found: Report; desk: string }> {
+export async function claimMatch(
+  repo: Repo,
+  lostId: string,
+  input: unknown,
+  actor: Actor,
+): Promise<{ lost: Report; found: Report; desk: string; turnedIn: boolean }> {
   const parsed = ClaimSchema.safeParse(input);
   if (!parsed.success) throw new ValidationError(parsed.error.issues[0]?.message ?? "Invalid claim");
-  const { found_id, answer } = parsed.data;
+  const { found_id, answer, desk: deskId, note } = parsed.data;
   const all = await repo.list();
   const lost = all.find((r) => r.id === lostId);
   const found = all.find((r) => r.id === found_id);
@@ -210,21 +241,48 @@ export async function claimMatch(repo: Repo, lostId: string, input: unknown, act
   if (!isOwner(lost, actor) && actor.kind !== "staff") throw new ForbiddenError("Only the person who lost it can claim it.");
   if (found.visibility === "private" && actor.kind !== "staff") throw new NotFoundError("Report not found");
   if (lost.status === "resolved" || found.status === "resolved") throw new ValidationError("This one is already closed.");
-  if (!matchesIn(all, lostId, actor).some((m) => m.report.id === found_id)) throw new ValidationError("That found item doesn't match your report.");
+  const isMatch = matchesIn(all, lostId, actor).some((m) => m.report.id === found_id);
+  if (!isMatch && answer.length < 3) throw new ValidationError("Tell us one thing only the owner would know about it.");
 
-  const desk = foundDropoff(OFFICES, found.category, found.building).office.name;
+  const turnedIn = found.events.some((e) => e.status === "routed");
+  const recommended = foundDropoff(OFFICES, found.category, found.building).office;
+  let desk: string;
+  if (turnedIn) desk = turnedInDesk(found) ?? recommended.name;
+  else if (deskId === "other") {
+    if (!note) throw new ValidationError("Tell the finder where to leave it in the note.");
+    desk = "the spot in the owner's note";
+  } else desk = (deskId && OFFICES.find((o) => o.id === deskId)?.name) || recommended.name;
+
   const at = new Date().toISOString();
-  const turnedIn = found.status === "routed";
-  const lostEvents: ReportEvent[] = [...lost.events, event("in_progress", "You claimed a matching found item", "reporter", at)];
+  const lostEvents: ReportEvent[] = [
+    ...lost.events,
+    { ...event("in_progress", isMatch ? "You claimed a matching found item" : "You claimed a found item", "reporter", at), ref: found.id },
+  ];
   if (answer) lostEvents.push({ ...event("in_progress", `Your proof for the desk: ${answer}`, "reporter", at), private: true });
-  const foundEvents: ReportEvent[] = [
-    ...found.events,
-    event(
+  lostEvents.push({
+    ...event(
       "in_progress",
-      turnedIn ? "The owner claimed it and will pick it up at the desk" : `The owner claimed it. Please drop it at ${desk}.`,
+      turnedIn ? `Pick it up at ${desk}. Bring your USF ID.` : `You asked the finder to drop it at ${desk}.${note ? ` Your note: ${note}` : ""}`,
       "system",
       at,
     ),
+    private: true,
+    ref: found.id,
+  });
+  const foundEvents: ReportEvent[] = [
+    ...found.events,
+    {
+      ...event(
+        "in_progress",
+        turnedIn
+          ? "The owner claimed it and will pick it up at the desk"
+          : `The owner claimed it. Please drop it at ${desk}.${note ? ` Their note: ${note}` : ""}`,
+        "system",
+        at,
+      ),
+      private: true,
+      ref: lost.id,
+    },
   ];
   await repo.update(lost.id, { status: "in_progress", events: lostEvents, updated_at: at });
   await repo.update(found.id, { status: "in_progress", events: foundEvents, updated_at: at });
@@ -232,7 +290,56 @@ export async function claimMatch(repo: Repo, lostId: string, input: unknown, act
     lost: withoutToken({ ...lost, status: "in_progress", events: lostEvents, updated_at: at }),
     found: publicView({ ...found, status: "in_progress", events: foundEvents, updated_at: at }) ?? withoutToken(found),
     desk,
+    turnedIn,
   };
+}
+
+/** Desk view: find a turned-in found post by the code the finder shows. Staff only. */
+export async function findByDropCode(repo: Repo, code: string, actor: Actor): Promise<{ report: Report; desk: string; note: string | null }> {
+  if (actor.kind !== "staff") throw new ForbiddenError("Desk staff only.");
+  const c = code.trim().toUpperCase();
+  const r = (await repo.list()).find((x) => x.type === "found" && dropCodeOf(x) === c);
+  if (!r) throw new NotFoundError("No item with that code. Check the code with the student.");
+  const note = turnedInDesk(r) ? ([...r.events].reverse().find((e) => e.status === "routed" && e.by === "reporter")?.note.match(/Note for the owner: (.+)$/)?.[1] ?? null) : null;
+  return { report: withoutToken(r), desk: turnedInDesk(r) ?? foundDropoff(OFFICES, r.category, r.building).office.name, note };
+}
+
+/**
+ * Desk check-in (V3 desk view). Confirm: record tag, shelf and hold date (private to the desk, the finder and the
+ * owner), and tell the owner who claimed it. Mismatch: flag it for staff.
+ */
+export async function deskCheckIn(repo: Repo, id: string, input: unknown, actor: Actor): Promise<Report> {
+  if (actor.kind !== "staff") throw new ForbiddenError("Desk staff only.");
+  const parsed = DeskCheckInSchema.safeParse(input);
+  if (!parsed.success) throw new ValidationError(parsed.error.issues[0]?.message ?? "Invalid check-in");
+  const { action, tag, shelf, hold_until } = parsed.data;
+  const all = await repo.list();
+  const r = all.find((x) => x.id === id);
+  if (!r || r.type !== "found") throw new NotFoundError("Report not found");
+  const at = new Date().toISOString();
+  const desk = turnedInDesk(r) ?? "the desk";
+  const events: ReportEvent[] = [...r.events];
+  if (action === "mismatch") {
+    events.push({ ...event(r.status, "Desk staff: the item at the desk doesn't match this post", "staff", at), private: true });
+    await repo.update(id, { events, updated_at: at });
+    return withoutToken({ ...r, events, updated_at: at });
+  }
+  const details = [tag && `tag ${tag}`, shelf, hold_until && `held until ${hold_until}`].filter(Boolean).join(", ");
+  events.push(event("routed", "Checked in at the desk", "staff", at));
+  events.push({ ...event("routed", `Desk check-in at ${desk}: ${details || "received"}`, "staff", at), private: true });
+  await repo.update(id, { status: r.status === "in_progress" ? "in_progress" : "routed", events, updated_at: at });
+  // the owner who claimed it hears right away, privately
+  const claim = [...r.events].reverse().find((e) => e.ref && e.private);
+  const lost = claim?.ref ? all.find((x) => x.id === claim.ref && x.type === "lost") : undefined;
+  if (lost) {
+    const le: ReportEvent[] = [
+      ...lost.events,
+      { ...event("in_progress", `It's at ${desk}${tag ? ` (tag ${tag})` : ""}${hold_until ? `, held until ${hold_until}` : ""}. Bring your USF ID.`, "staff", at), private: true, ref: r.id },
+    ];
+    await repo.update(lost.id, { events: le, updated_at: at });
+  }
+  const updated = (await repo.get(id))!;
+  return withoutToken(updated);
 }
 
 function defaultNote(r: StoredReport, s: Status, staff: boolean): string {

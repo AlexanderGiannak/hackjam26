@@ -153,8 +153,13 @@ export async function setStatus(id: string, status: Status, note = "", ops?: str
 }
 
 /** "This is mine: claim it": tells the finder where to leave it and keeps the proof answer private. */
-export async function claim(lostId: string, foundId: string, answer = ""): Promise<{ lost: Report; found: Report; desk: string }> {
-  const body = { found_id: foundId, answer };
+export async function claim(
+  lostId: string,
+  foundId: string,
+  answer = "",
+  opts: { desk?: string; note?: string } = {},
+): Promise<{ lost: Report; found: Report; desk: string; turnedIn: boolean }> {
+  const body = { found_id: foundId, answer, ...opts };
   if (isLocalMode) return svc.claimMatch(repo(), lostId, body, actor(lostId));
   return call(`/api/reports/${encodeURIComponent(lostId)}/claim`, {
     method: "POST",
@@ -208,6 +213,28 @@ export async function opsReports(passcode: string): Promise<Report[]> {
     return svc.listAllForStaff(repo());
   }
   return (await call<{ reports: Report[] }>("/api/ops/reports", { ops: passcode })).reports;
+}
+
+/** Desk view: find a turned-in item by the finder's drop-off code. */
+export async function deskLookup(code: string, passcode: string): Promise<{ report: Report; desk: string; note: string | null }> {
+  if (isLocalMode) return svc.findByDropCode(repo(), code, actor(undefined, passcode));
+  return call(`/api/ops/desk?code=${encodeURIComponent(code)}`, { ops: passcode });
+}
+
+export async function deskConfirm(
+  id: string,
+  input: { action: "confirm" | "mismatch"; tag?: string; shelf?: string; hold_until?: string },
+  passcode: string,
+): Promise<Report> {
+  if (isLocalMode) return svc.deskCheckIn(repo(), id, input, actor(undefined, passcode));
+  return (
+    await call<{ report: Report }>("/api/ops/desk", {
+      method: "POST",
+      body: JSON.stringify({ id, ...input }),
+      headers: { "Content-Type": "application/json" },
+      ops: passcode,
+    })
+  ).report;
 }
 
 // ---------- AI ----------

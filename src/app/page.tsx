@@ -1,81 +1,59 @@
 import Link from "next/link";
-import { BoxIcon, CameraIcon, ChevronRight, SearchIcon, TrayIcon } from "@/components/Icons";
-import { CampusNow, FoundWaiting } from "@/components/CampusNow";
-import { APP_NAME } from "@/lib/brand";
+import { BoxIcon, CameraIcon, SearchIcon } from "@/components/Icons";
 
-/** Home, from HackJam Wireframes V2: one big "Snap & report", the lost and found paths, and the campus right now. */
+const CARDS = [
+  {
+    href: "/lost",
+    icon: SearchIcon,
+    title: "I lost something",
+    sub: "No photo needed. We tell you where to check and who to call.",
+    card: "border border-line bg-white text-ink hover:border-ink/30",
+    chip: "bg-canvas text-ink",
+    subColor: "text-ink/80",
+  },
+  {
+    href: "/found",
+    icon: BoxIcon,
+    title: "I found something",
+    sub: "Takes 30 seconds. We tell you where to drop it off.",
+    card: "bg-ink text-white hover:bg-black",
+    chip: "bg-white/15 text-white",
+    subColor: "text-white/85",
+  },
+  {
+    href: "/fix",
+    icon: CameraIcon,
+    title: "Snap & report",
+    sub: "AI reads the photo and sends it to the right USF office.",
+    card: "bg-bull text-white hover:bg-bull-dark",
+    chip: "bg-white/15 text-white",
+    subColor: "text-white/85",
+  },
+];
+
+/** Home, from HackJam Wireframes V3: three big doors, nothing else in the way. */
 export default function Home() {
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-8">
-      <div className="space-y-4">
-        <section>
-          <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl">
-            See it. Snap it.
-            <br />
-            <span className="text-bull">USF hears it.</span>
-          </h1>
-          <p className="mt-3 text-lg text-muted">
-            Broken light, pothole, car blocking a ramp, a wallet on a bench. You don&apos;t need to know which office to tell. {APP_NAME} does.
-          </p>
-        </section>
-
-        <Link
-          href="/fix"
-          className="flex items-center gap-5 rounded-3xl bg-bull p-5 text-white transition hover:bg-bull-dark active:scale-[0.99] sm:p-6"
-        >
-          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-            <CameraIcon className="h-8 w-8" />
-          </span>
-          <span>
-            <span className="block text-2xl font-bold">Snap &amp; report</span>
-            <span className="mt-0.5 block text-white/90">AI reads the photo and sends it to the right USF office.</span>
-          </span>
-        </Link>
-
-        <Link
-          href="/found"
-          className="flex items-center gap-5 rounded-3xl bg-sun p-5 text-ink shadow-sm transition hover:bg-sun-dark active:scale-[0.99] sm:p-6"
-        >
-          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/40">
-            <BoxIcon className="h-8 w-8" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-2xl font-bold">I found something</span>
-            <span className="mt-0.5 block text-ink/80">Snap it. We show you where to turn it in and find the owner.</span>
-          </span>
-          <ChevronRight className="h-6 w-6 shrink-0" />
-        </Link>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/lost" className="rounded-3xl border border-line bg-white p-4 transition hover:border-ink/30 active:scale-[0.99] sm:p-5">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-canvas">
-              <SearchIcon className="h-5 w-5" />
+    <div className="flex min-h-[calc(100dvh-14rem)] flex-col justify-center gap-6">
+      <h1 className="sr-only">FixMyUni: lost it, found it, or something&apos;s broken at USF Tampa</h1>
+      <div className="grid gap-4 md:grid-cols-3">
+        {CARDS.map(({ href, icon: Icon, title, sub, card, chip, subColor }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`flex min-h-56 flex-col justify-center rounded-[2rem] p-6 transition active:scale-[0.99] sm:p-7 md:min-h-72 ${card}`}
+          >
+            <span className={`flex h-14 w-14 items-center justify-center rounded-2xl ${chip}`}>
+              <Icon className="h-7 w-7" />
             </span>
-            <span className="mt-3 block text-lg font-bold">I lost something</span>
-            <span className="mt-1 block text-sm text-muted">No photo needed. Get alerted on a match.</span>
+            <span className="mt-4 block font-display text-[2rem] font-black leading-[1.05] tracking-tight">{title}</span>
+            <span className={`mt-2 block text-[17px] ${subColor}`}>{sub}</span>
           </Link>
-          <Link href="/browse?type=found" className="rounded-3xl border border-line bg-white p-4 transition hover:border-ink/30 active:scale-[0.99] sm:p-5">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-canvas">
-              <TrayIcon className="h-5 w-5" />
-            </span>
-            <span className="mt-3 block text-lg font-bold">Found items</span>
-            <span className="mt-1 block text-sm text-muted">
-              <FoundWaiting />
-            </span>
-          </Link>
-        </div>
-
-        <p className="hidden pt-2 text-sm text-muted lg:block">
-          Need a phone number?{" "}
-          <Link href="/contacts" className="link">Tampa lost &amp; found contacts</Link>. Emergency? <a href="tel:911" className="link">Call 911</a>.
-        </p>
+        ))}
       </div>
-
-      <CampusNow />
-
-      <p className="text-sm text-muted lg:hidden">
-        Need a phone number?{" "}
-        <Link href="/contacts" className="link">Tampa lost &amp; found contacts</Link>. Emergency? <a href="tel:911" className="link">Call 911</a>.
+      <p className="text-center text-sm text-muted">
+        Need a phone number? <Link href="/contacts" className="link">Tampa lost &amp; found contacts</Link>. Campus problems on a map:{" "}
+        <Link href="/issues" className="link">Campus</Link>. Emergency? <a href="tel:911" className="link">Call 911</a>.
       </p>
     </div>
   );

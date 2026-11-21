@@ -1,7 +1,7 @@
 {
-  "name": "Fix My Uni: report anything at USF",
-  "short_name": "Fix My Uni",
-  "description": "Snap it, and Fix My Uni sends it to the USF office that owns it.",
+  "name": "FixMyUni: report anything at USF",
+  "short_name": "FixMyUni",
+  "description": "Snap it, and FixMyUni sends it to the USF office that owns it.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ede7d1",
