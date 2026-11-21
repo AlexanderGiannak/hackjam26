@@ -1,110 +1,91 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { MapView, TYPE_COLORS } from "@/components/MapView";
-import { listReports } from "@/lib/client";
-import { reportTitle, type Report } from "@/lib/types";
+import { BoxIcon, SearchIcon, WrenchIcon } from "@/components/Icons";
+import { CampusNow } from "@/components/CampusNow";
+import { RecentLost } from "@/components/RecentLost";
+
+const ACTIONS = [
+  {
+    href: "/lost",
+    icon: SearchIcon,
+    title: "I lost something",
+    sub: "See where to look and who to call",
+    long: "See where to look and who to call, in order.",
+    primary: true,
+  },
+  {
+    href: "/found",
+    icon: BoxIcon,
+    title: "I found something",
+    sub: "Find out where to turn it in",
+    long: "Find out where to turn it in and post it so the owner can see it.",
+  },
+  {
+    href: "/fix",
+    icon: WrenchIcon,
+    title: "Report a problem",
+    sub: "Broken stuff, potholes, bad parking",
+    long: "Snap it: broken lights, leaks, potholes, bad parking, hazards. We send it to the office that owns it.",
+  },
+];
 
 export default function Home() {
-  const [rows, setRows] = useState<Report[] | null>(null);
-  useEffect(() => {
-    listReports().then(setRows).catch(() => setRows([]));
-  }, []);
-
-  const issues = rows?.filter((r) => r.type === "issue") ?? [];
-  const openIssues = issues.filter((r) => r.status !== "resolved");
-  const fixed = issues.filter((r) => r.status === "resolved").length;
-  const found = rows?.filter((r) => r.type === "found" && r.status !== "resolved").length ?? 0;
-  const people = openIssues.reduce((n, r) => n + 1 + r.me_too_count, 0);
-
   return (
-    <div className="space-y-6">
-      <section className="pt-1">
-        <h1 className="text-3xl font-bold leading-tight tracking-tight">
-          See it. Snap it.
-          <br />
-          <span className="text-bull">USF hears it.</span>
-        </h1>
-        <p className="mt-2 text-neutral-600">
-          Broken light, pothole, car blocking a ramp, a wallet on a bench. You don&apos;t need to know which office to tell. Bullhorn does.
+    <div>
+      <section className="max-w-3xl">
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">What happened?</h1>
+        <p className="mt-3 text-lg text-muted sm:text-xl">
+          You don&apos;t need to know which office to ask. Pick one and we&apos;ll tell you where to go next on the USF Tampa campus.
         </p>
       </section>
 
-      <Link href="/report" className="flex items-center gap-4 rounded-3xl bg-bull p-5 text-white shadow-lg transition active:scale-[0.99]">
-        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-4xl">📷</span>
-        <span>
-          <span className="block text-xl font-bold">Snap &amp; report</span>
-          <span className="block text-sm text-white/80">AI reads the photo and sends it to the right USF office.</span>
-        </span>
-      </Link>
-
-      <section className="grid grid-cols-2 gap-3">
-        <Link href="/report?intent=lost" className="card transition active:scale-[0.99]">
-          <span className="text-2xl">🔎</span>
-          <p className="mt-1 font-semibold">I lost something</p>
-          <p className="text-xs text-neutral-500">No photo needed. Get alerted on a match.</p>
-        </Link>
-        <Link href="/browse" className="card transition active:scale-[0.99]">
-          <span className="text-2xl">🙌</span>
-          <p className="mt-1 font-semibold">Found items</p>
-          <p className="text-xs text-neutral-500">{rows ? `${found} waiting for their owners` : "…"}</p>
-        </Link>
-      </section>
-
-      <section className="card space-y-3">
-        <div className="grid grid-cols-3 text-center">
-          <Stat n={openIssues.length} label="open issues" />
-          <Stat n={people} label="students affected" />
-          <Stat n={fixed} label="fixed" />
-        </div>
-        <MapView
-          className="h-56 w-full"
-          zoom={15}
-          markers={openIssues.filter((r) => r.lat != null && r.lng != null).map((r) => ({
-            id: r.id,
-            lat: r.lat!,
-            lng: r.lng!,
-            color: r.severity === "urgent" ? TYPE_COLORS.urgent : TYPE_COLORS.issue,
-            size: 6 + Math.min(8, r.me_too_count),
-            label: `${reportTitle(r)} · ${1 + r.me_too_count} affected`,
-            onClick: () => (location.href = `/r/${r.id}`),
-          }))}
-        />
-        <Link href="/issues" className="block text-center text-sm font-semibold text-bull underline">
-          See everything on campus →
-        </Link>
-      </section>
-
-      <section>
-        <h2 className="mb-2 font-semibold">How it works</h2>
-        <ol className="space-y-2 text-sm">
-          {[
-            ["📷", "Snap it", "AI recognizes the problem or item, and blurs faces and plates on your phone."],
-            ["🧭", "We route it", "Facilities, Housing, Parking, Police, the library, or the Card Center, by what and where."],
-            ["🔔", "You hear back", "Live status, a pop-up when your lost item turns up, and a staff console that closes the loop."],
-          ].map(([icon, t, d]) => (
-            <li key={t} className="flex gap-3">
-              <span className="text-xl">{icon}</span>
-              <span>
-                <strong>{t}.</strong> {d}
+      <section className="mt-8 grid gap-4 md:grid-cols-3 md:gap-6">
+        {ACTIONS.map(({ href, icon: Icon, title, sub, long, primary }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`flex items-center gap-5 rounded-3xl px-6 py-6 transition active:scale-[0.99] md:flex-col md:items-start md:gap-4 md:px-8 md:py-8 ${
+              primary ? "bg-bull text-white hover:bg-bull-dark" : "border-[1.5px] border-ink bg-white hover:bg-tint"
+            }`}
+          >
+            <Icon className="h-8 w-8 shrink-0" />
+            <span>
+              <span className="block text-xl font-semibold md:text-2xl">{title}</span>
+              <span className={`mt-0.5 block md:mt-2 ${primary ? "text-white/90" : "text-muted"}`}>
+                <span className="md:hidden">{sub}</span>
+                <span className="hidden md:inline">{long}</span>
               </span>
-            </li>
-          ))}
-        </ol>
+            </span>
+          </Link>
+        ))}
       </section>
-      <p className="text-center text-xs text-neutral-500">
-        Emergency? <a href="tel:911" className="underline">Call 911</a>. A student project, not an official USF service.
-      </p>
-    </div>
-  );
-}
 
-function Stat({ n, label }: { n: number; label: string }) {
-  return (
-    <div>
-      <p className="text-2xl font-bold tabular-nums text-bull">{n}</p>
-      <p className="text-xs text-neutral-500">{label}</p>
+      <section className="mt-10">
+        <div className="mb-4 flex items-baseline justify-between">
+          <h2 className="text-2xl font-semibold">Current lost items</h2>
+          <Link href="/browse" className="link">
+            <span className="md:hidden">Browse all</span>
+            <span className="hidden md:inline">Browse all lost items</span>
+          </Link>
+        </div>
+        <RecentLost />
+      </section>
+
+      <section className="mt-10">
+        <div className="mb-4 flex items-baseline justify-between">
+          <h2 className="text-2xl font-semibold">Campus right now</h2>
+          <Link href="/issues" className="link">Campus issues</Link>
+        </div>
+        <CampusNow />
+      </section>
+
+      <section className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-[15px] text-muted">
+        <Link href="/me" className="link">My reports</Link>
+        <Link href="/contacts" className="link">Tampa lost &amp; found phone numbers</Link>
+        <Link href="/ops" className="link">USF staff console</Link>
+        <span>
+          Emergency? <a href="tel:911" className="link">Call 911</a>. A student project, not an official USF service.
+        </span>
+      </section>
     </div>
   );
 }

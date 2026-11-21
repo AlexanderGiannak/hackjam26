@@ -1,12 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Old routes from the first version still work.
+  // Links from the earlier single-flow version still work.
   async redirects() {
     return [
-      { source: "/lost", destination: "/report?intent=lost", permanent: false },
-      { source: "/found", destination: "/report?intent=found", permanent: false },
-      { source: "/fix", destination: "/report?intent=issue", permanent: false },
+      { source: "/report", has: [{ type: "query", key: "intent", value: "lost" }], destination: "/lost", permanent: false },
+      { source: "/report", has: [{ type: "query", key: "intent", value: "found" }], destination: "/found", permanent: false },
+      { source: "/report", destination: "/fix", permanent: false },
     ];
   },
   async headers() {

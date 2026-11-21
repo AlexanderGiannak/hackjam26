@@ -84,7 +84,8 @@ function ReportPage() {
   const pinColor = report.type === "issue" ? (report.severity === "urgent" ? TYPE_COLORS.urgent : TYPE_COLORS.issue) : TYPE_COLORS[report.type];
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-2xl space-y-5">
+      <Link href="/me" className="link text-[15px]">← My reports</Link>
       {fresh && (
         <div className="pop-in rounded-2xl bg-bull p-4 text-white">
           <p className="text-lg font-bold">{report.type === "issue" ? "Sent to USF ✅" : report.type === "found" ? "Posted. Thank you! 🙌" : "Saved. We're watching for it 👀"}</p>
@@ -143,7 +144,7 @@ function ReportPage() {
 
       <div className="grid grid-cols-2 gap-3">
         <button onClick={share} className="btn-ghost">{copied ? "Link copied" : "Share"}</button>
-        <Link href="/report" className="btn-ghost">Report another</Link>
+        <Link href="/" className="btn-ghost">Report another</Link>
       </div>
     </div>
   );
@@ -262,9 +263,12 @@ function IssueView({ report, voted, onVote }: { report: Report; voted: boolean; 
         {ch.kind === "link" && ch.office.url && (
           <a href={ch.office.url} target="_blank" rel="noreferrer" className="btn-primary w-full">{ch.label} ↗</a>
         )}
+        {ch.kind === "email" && (
+          <a href={mail.href} className="btn-primary w-full">✉️ {ch.label} (ready to send)</a>
+        )}
         {(ch.kind === "email" || ch.kind === "call") && (
           <details className="rounded-xl bg-neutral-50 p-3 text-sm">
-            <summary className="cursor-pointer font-medium">{ch.kind === "email" ? "✉️ Email it to them too (ready to send)" : "✉️ Or email them"}</summary>
+            <summary className="cursor-pointer font-medium">{ch.kind === "email" ? "Preview the email" : "✉️ Or email them"}</summary>
             {mail.testMode && (
               <p className="mt-2 text-xs text-amber-800">Test mode: goes to {mail.to || "nobody yet (set NEXT_PUBLIC_TEST_EMAIL)"} instead of {ch.office.email ?? ch.office.name}.</p>
             )}

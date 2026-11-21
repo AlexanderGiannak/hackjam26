@@ -1,4 +1,5 @@
 import { findDuplicates, type Nearby } from "./duplicates";
+import { findBuilding } from "./buildings";
 import { buildingAt } from "./geo";
 import { findMatches, type Match } from "./matching";
 import { OFFICES } from "./offices";
@@ -61,15 +62,20 @@ function event(status: Status, note: string, by: ReportEvent["by"], at = new Dat
 export async function createReport(
   repo: Repo,
   input: unknown,
-  photo_url: string | null,
+  photos: string[],
   now = new Date(),
 ): Promise<{ report: Report; token: string }> {
   const r = parseNewReport(input);
-  if (r.type === "found" && !photo_url && r.category !== "id_card") {
+  const max = r.type === "lost" ? 3 : 1;
+  if (photos.length > max) throw new ValidationError(`At most ${max} photo${max > 1 ? "s" : ""} for this kind of report.`);
+  if (r.type === "found" && !photos.length && r.category !== "id_card") {
     throw new ValidationError("Add a photo so the owner can recognize it.");
   }
-  // A dropped pin decides the building: at a building -> that building; outdoors -> no building.
-  const building = r.lat != null && r.lng != null ? (buildingAt(r.lat, r.lng)?.name ?? null) : r.building;
+  // A building the student picked wins (if it is a real one). Otherwise the pin decides: at a building -> that
+  // building; outdoors (road, lot, lawn) -> no building.
+  const picked = findBuilding(r.building)?.name ?? null;
+  const building = picked ?? (r.lat != null && r.lng != null ? (buildingAt(r.lat, r.lng)?.name ?? null) : null);
+  if (!building && (r.lat == null || r.lng == null)) throw new ValidationError("Pick a building or drop a pin on the map.");
   const office = assignOffice(OFFICES, { ...r, building });
   const iso = now.toISOString();
   const visibility = visibilityFor(r);
@@ -83,7 +89,8 @@ export async function createReport(
     ...r,
     building,
     id: newId(),
-    photo_url,
+    photo_url: photos[0] ?? null,
+    photo_urls: photos,
     status,
     visibility,
     office_id: office.id,

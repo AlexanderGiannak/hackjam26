@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   });
 }
 
-/** multipart/form-data: `report` (JSON, see NewReportSchema) + optional `photo` (JPEG, already resized and blurred). */
+/** multipart/form-data: `report` (JSON, see NewReportSchema) + up to 3 `photo` fields (JPEG, already resized and blurred). */
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return json({ error: "Cross-site request refused" }, 403);
   const tooMany = limited(createLimit, req, "create");
@@ -34,14 +34,16 @@ export async function POST(req: Request) {
       return json({ error: "Bad report JSON" }, 400);
     }
     const input = parseNewReport(raw); // validate before touching storage
-    const photo = form.get("photo");
-    let photo_url: string | null = null;
-    if (photo instanceof Blob && photo.size > 0) {
-      if (photo.size > MAX_PHOTO) return json({ error: "Photo is too large" }, 413);
-      if (photo.type && photo.type !== "image/jpeg") return json({ error: "Photo must be a JPEG" }, 415);
-      photo_url = await uploadPhoto(db!, await photo.arrayBuffer(), visibilityFor(input) === "private");
+    const files = form.getAll("photo").filter((p): p is File => typeof p !== "string" && p.size > 0);
+    if (files.length > 3) return json({ error: "At most 3 photos" }, 400);
+    for (const f of files) {
+      if (f.size > MAX_PHOTO) return json({ error: "Photo is too large" }, 413);
+      if (f.type && f.type !== "image/jpeg") return json({ error: "Photo must be a JPEG" }, 415);
     }
-    const created = await createReport(repo, input, photo_url);
+    const isPrivate = visibilityFor(input) === "private";
+    const photos: string[] = [];
+    for (const f of files) photos.push(await uploadPhoto(db!, await f.arrayBuffer(), isPrivate));
+    const created = await createReport(repo, input, photos);
     return json(created, 201);
   });
 }

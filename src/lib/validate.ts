@@ -14,6 +14,7 @@ export const NewReportSchema = z
     description: text(500).default(""),
     tags: z.array(text(30)).max(12).default([]),
     building: text(80).nullable().default(null),
+    spot: text(120).nullable().default(null).transform((v) => v || null),
     lat: z.number().finite().nullable().default(null),
     lng: z.number().finite().nullable().default(null),
     issue_type: z.enum(ISSUE_TYPES).nullable().default(null),

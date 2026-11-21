@@ -67,7 +67,12 @@ export function sameOrigin(req: Request): boolean {
 
 export async function withPhotos<T extends Report>(rows: T[]): Promise<T[]> {
   if (!db) return rows;
-  return Promise.all(rows.map(async (r) => ({ ...r, photo_url: await resolvePhoto(db!, r.photo_url) })));
+  return Promise.all(
+    rows.map(async (r) => {
+      const urls = await Promise.all((r.photo_urls ?? []).map((u) => resolvePhoto(db!, u)));
+      return { ...r, photo_url: await resolvePhoto(db!, r.photo_url), photo_urls: urls.filter((u): u is string => !!u) };
+    }),
+  );
 }
 
 export async function voterId(req: Request): Promise<string> {

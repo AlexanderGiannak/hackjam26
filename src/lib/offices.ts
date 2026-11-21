@@ -86,6 +86,21 @@ export const OFFICES: Office[] = [
     verified: true,
   },
   {
+    // https://www.usf.edu/student-affairs/msc/msc-services/lost-found.aspx  (hours still to confirm)
+    id: "msc",
+    short: "MSC Desk",
+    name: "MSC Information Desk",
+    handles: "Non-valuable items found in the Marshall Student Center (held 30 days). Valuables go to USF Police daily.",
+    categories: ["msc"],
+    hours: null,
+    phone: "813-974-3180",
+    email: null,
+    url: "https://www.usf.edu/student-affairs/msc/msc-services/lost-found.aspx",
+    location: "Marshall Student Center",
+    sort_order: 5,
+    verified: false,
+  },
+  {
     // https://www.usf.edu/facilities/service-center/contact-us.aspx
     id: "facilities",
     short: "Facilities",
@@ -98,7 +113,7 @@ export const OFFICES: Office[] = [
     email: "FM-ServiceCenter@usf.edu",
     url: "https://www.usf.edu/facilities/service-center/contact-us.aspx",
     location: "3820 USF Holly Drive (next to the USF Post Office)",
-    sort_order: 5,
+    sort_order: 6,
     verified: true,
   },
   {
@@ -114,7 +129,7 @@ export const OFFICES: Office[] = [
     email: null,
     url: "https://assetessentials.dudesolutions.com/USFH/",
     location: null,
-    sort_order: 6,
+    sort_order: 7,
     verified: true,
   },
   {
@@ -130,7 +145,7 @@ export const OFFICES: Office[] = [
     email: "psweb@usf.edu",
     url: "https://www.usf.edu/parking/about-us/contact-us.aspx",
     location: "13311 USF Plum Drive (Parking & Transportation Building)",
-    sort_order: 7,
+    sort_order: 8,
     verified: false,
   },
 ];
