@@ -26,7 +26,7 @@ Use "Reset demo" in the yellow banner to start over.
 | Browse items | `/browse` | Lost / Found tabs, keyword search, type + building filters, "I found this" / "This is mine" links that prefill the other flow |
 | Contacts | `/contacts` | Sourced USF Tampa lost & found and help numbers, plus official lost & found links |
 | Campus issues | `/issues` | Me-too counts, status (reported -> sent -> resolved), hotspots |
-| Photo AI (stretch) | `/api/analyze` | Gemini fills category, color, brand, description, ID flag. Key stays server-side. Results cached in the browser for demo safety |
+| Photo autofill | `/api/analyze`, `src/lib/autofill.ts` | Runs automatically when a photo is added. Gemini fills item type, color, brand, description, ID flag (or issue type + description for broken reports); GPS fills the building. Filled fields get an "Auto-filled" tag, user edits are never overwritten, Undo restores. Without a key (or if Gemini fails) it still guesses the color on-device. Results cached in the browser for demo safety |
 
 ## Design
 

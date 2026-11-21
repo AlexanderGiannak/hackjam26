@@ -2,17 +2,30 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { findBuilding, nearestBuilding } from "@/lib/buildings";
 import { findMatches, type Match } from "@/lib/matching";
-import { blobToBase64, compressImage, readGps } from "@/lib/photo";
+import { analyzePhoto, type AutoResult } from "@/lib/autofill";
+import { readGps } from "@/lib/photo";
 import { foundDropoff, lostChecklist } from "@/lib/routing";
 import { saveReport, toDraft } from "@/lib/save";
 import { getReport, listReports, setStatus } from "@/lib/store";
 import { CATEGORIES, CATEGORY_LABELS, itemTitle, type Category, type Report } from "@/lib/types";
 import { useOffices } from "@/lib/useOffices";
-import { BuildingSelect, ChoiceGrid, ColorSwatches, ErrorNote, PageHead, PhotoDrop, SectionHead, type Photo } from "./fields";
-import { ChevronRight, SparkIcon } from "./Icons";
+import {
+  AutofillBanner,
+  AutoTag,
+  BuildingSelect,
+  ChoiceGrid,
+  ColorSwatches,
+  ErrorNote,
+  PageHead,
+  PhotoDrop,
+  SectionHead,
+  type AutoState,
+  type Photo,
+} from "./fields";
+import { ChevronRight } from "./Icons";
 import { ItemCard } from "./ItemCard";
 import { OfficeCard } from "./OfficeCard";
 import { PostPreview } from "./PostPreview";
@@ -27,19 +40,7 @@ const WHEN = {
 } as const;
 type When = keyof typeof WHEN;
 
-interface AiResult {
-  category?: Category;
-  color?: string;
-  brand?: string | null;
-  description?: string;
-  is_id_card?: boolean;
-}
-const AI_CACHE_KEY = "campus-helper.ai-cache.v1";
-function cacheKey(b64: string) {
-  let h = 0;
-  for (let i = 0; i < b64.length; i += 97) h = (h * 31 + b64.charCodeAt(i)) | 0;
-  return `${b64.length}:${h}`;
-}
+type Field = "category" | "color" | "brand" | "details" | "building";
 
 interface Done {
   report: Report | null;
@@ -66,16 +67,16 @@ export function ItemFlow({ type }: { type: Kind }) {
   const [done, setDone] = useState<Done | null>(null);
   const [candidates, setCandidates] = useState<Report[]>([]);
   const [linked, setLinked] = useState<Report | null>(null);
-  const [aiEnabled, setAiEnabled] = useState(false);
-  const [ai, setAi] = useState<{ state: "idle" | "busy" | "done" | "error"; msg?: string }>({ state: "idle" });
+  // photo autofill: which fields we filled, which the user has edited, and an undo snapshot
+  const [auto, setAuto] = useState<AutoState>({ state: "idle" });
+  const [autoFields, setAutoFields] = useState<Set<Field>>(new Set());
+  const touched = useRef<Set<Field>>(new Set());
+  const runId = useRef(0);
+  const undoSnap = useRef<Partial<Record<Field, string>> | null>(null);
 
   // reports of the opposite type, for live "possible owners" and matching
   useEffect(() => {
     listReports(lost ? "found" : "lost").then(setCandidates).catch(() => {});
-    fetch("/api/analyze")
-      .then((r) => r.json())
-      .then((j) => setAiEnabled(!!j.enabled))
-      .catch(() => {});
   }, [lost]);
 
   // "I found this" / "This is mine" links prefill from the other post
@@ -85,9 +86,18 @@ export function ItemFlow({ type }: { type: Kind }) {
     getReport(id).then((r) => {
       if (!r) return;
       setLinked(r);
-      if (r.category) setCategory(r.category);
-      if (r.color) setColor(r.color);
-      if (r.building) setBuilding(r.building);
+      if (r.category) {
+        touched.current.add("category");
+        setCategory(r.category);
+      }
+      if (r.color) {
+        touched.current.add("color");
+        setColor(r.color);
+      }
+      if (r.building) {
+        touched.current.add("building");
+        setBuilding(r.building);
+      }
     });
   }, [params]);
 
@@ -122,61 +132,80 @@ export function ItemFlow({ type }: { type: Kind }) {
     [lost, category, building, draftReport, candidates],
   );
 
+  // ---- user edits: mark the field as theirs so autofill never overwrites it ----
+  const userEdit = (f: Field) => {
+    touched.current.add(f);
+    setAutoFields((s) => {
+      if (!s.has(f)) return s;
+      const n = new Set(s);
+      n.delete(f);
+      return n;
+    });
+  };
+  const editCategory = (v: Category) => (userEdit("category"), setCategory(v));
+  const editColor = (v: string) => (userEdit("color"), setColor(v));
+  const editBrand = (v: string) => (userEdit("brand"), setBrand(v));
+  const editDetails = (v: string) => (userEdit("details"), setDetails(v));
+  const editBuilding = (v: string) => (userEdit("building"), setBuilding(v), setGpsNote(null));
+
   async function onPhotos(next: Photo[]) {
-    const isNewFirst = next[0] && next[0] !== photos[0];
+    const isNewFirst = !!next[0] && next[0] !== photos[0];
     setPhotos(next);
-    setAi({ state: "idle" });
     if (!next.length) {
       setGps(null);
       setGpsNote(null);
+      setAuto({ state: "idle" });
       return;
     }
-    if (isNewFirst) {
-      const g = await readGps(next[0].file);
-      setGps(g);
-      if (g) {
-        const b = nearestBuilding(g.lat, g.lng);
-        if (b) {
-          setBuilding(b.name);
-          setGpsNote(`Location from photo: ${b.name}`);
-        } else setGpsNote("Photo has GPS, but it's not near a campus building.");
-      }
-    }
+    if (isNewFirst) autofill(next[0].file);
   }
 
-  async function runAi() {
-    if (!photos[0]) return;
-    setAi({ state: "busy" });
-    try {
-      const image = await blobToBase64(await compressImage(photos[0].file, 768, 0.7));
-      const key = `item:${cacheKey(image)}`;
-      let cache: Record<string, AiResult> = {};
-      try {
-        cache = JSON.parse(localStorage.getItem(AI_CACHE_KEY) || "{}");
-      } catch {}
-      let r = cache[key];
-      if (!r) {
-        const res = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image, mode: "item" }),
-        });
-        const j = await res.json();
-        if (!res.ok) throw new Error(j.error || "AI failed");
-        r = j;
-        try {
-          localStorage.setItem(AI_CACHE_KEY, JSON.stringify({ ...cache, [key]: r }));
-        } catch {}
-      }
-      if (r.category && (CATEGORIES as readonly string[]).includes(r.category)) setCategory(r.category);
-      if (r.is_id_card) setCategory("id_card");
-      if (r.color) setColor(r.color.toLowerCase());
-      if (r.brand) setBrand(r.brand);
-      if (r.description && !details) setDetails(r.description);
-      setAi({ state: "done", msg: "Filled in from your photo. Fix anything that's off." });
-    } catch (e) {
-      setAi({ state: "error", msg: `${(e as Error).message}. You can fill it in by hand.` });
+  /** Runs as soon as a photo is added: GPS -> building, Gemini (or on-device color) -> the rest. */
+  async function autofill(file: File) {
+    const id = ++runId.current;
+    setAuto({ state: "busy" });
+    const [g, r] = await Promise.all([readGps(file), analyzePhoto(file, "item").catch((): AutoResult => ({ source: "none" }))]);
+    if (id !== runId.current) return; // a newer photo replaced this one
+
+    const snap: Partial<Record<Field, string>> = { category, color, brand, details, building };
+    const filled = new Set<Field>();
+    const put = (f: Field, v: string | undefined, set: (v: string) => void) => {
+      if (!v || touched.current.has(f)) return;
+      set(v);
+      filled.add(f);
+    };
+
+    setGps(g);
+    if (g) {
+      const b = nearestBuilding(g.lat, g.lng);
+      if (b) {
+        put("building", b.name, setBuilding);
+        setGpsNote(`Location from photo: ${b.name}`);
+      } else setGpsNote("Photo has GPS, but it's not near a campus building.");
     }
+    put("category", r.category, (v) => setCategory(v as Category));
+    put("color", r.color, setColor);
+    put("brand", r.brand, setBrand);
+    put("details", r.description, setDetails);
+
+    undoSnap.current = snap;
+    setAutoFields(filled);
+    setAuto({ state: "done", source: r.source, count: filled.size });
+  }
+
+  function undoAutofill() {
+    const s = undoSnap.current;
+    if (!s) return;
+    if (autoFields.has("category")) setCategory((s.category as Category) ?? "");
+    if (autoFields.has("color")) setColor(s.color ?? "");
+    if (autoFields.has("brand")) setBrand(s.brand ?? "");
+    if (autoFields.has("details")) setDetails(s.details ?? "");
+    if (autoFields.has("building")) {
+      setBuilding(s.building ?? "");
+      setGpsNote(null);
+    }
+    setAutoFields(new Set());
+    setAuto({ state: "idle" });
   }
 
   function validate(): string | null {
@@ -220,7 +249,7 @@ export function ItemFlow({ type }: { type: Kind }) {
   if (done) return <DoneView type={type} done={done} photoUrl={photos[0]?.url} draft={draftReport} pickup={dropoff?.office.name} />;
 
   const title = lost ? "I lost something" : "I found something";
-  const previewTitle = itemTitle({ color: color || null, category: category || null });
+  const previewTitle = itemTitle({ color: color || null, category: category || null, brand: brand.trim() || null });
 
   return (
     <div>
@@ -256,17 +285,17 @@ export function ItemFlow({ type }: { type: Kind }) {
                 }
                 hint={lost ? "A photo of the item, or proof like a Find My screenshot or a receipt. Add up to 3." : undefined}
               />
-              {photos.length > 0 && aiEnabled && (
-                <div className="mt-3">
-                  <button type="button" onClick={runAi} disabled={ai.state === "busy"} className="btn-ghost w-full py-2.5 text-sm">
-                    <SparkIcon /> {ai.state === "busy" ? "Looking at your photo..." : "Fill in from photo"}
-                  </button>
-                  {ai.msg && <p className={`mt-1.5 text-sm ${ai.state === "error" ? "text-red-700" : "text-muted"}`}>{ai.msg}</p>}
-                </div>
-              )}
+              <AutofillBanner auto={auto} onUndo={auto.count ? undoAutofill : undefined} />
             </div>
 
-            <ChoiceGrid label="What is it?" options={CATEGORIES} labels={CATEGORY_LABELS} value={category} onChange={setCategory} />
+            <ChoiceGrid
+              label="What is it?"
+              options={CATEGORIES}
+              labels={CATEGORY_LABELS}
+              value={category}
+              onChange={editCategory}
+              auto={autoFields.has("category")}
+            />
 
             {!lost && isId && (
               <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-[15px] text-amber-900">
@@ -275,7 +304,7 @@ export function ItemFlow({ type }: { type: Kind }) {
               </div>
             )}
 
-            <ColorSwatches value={color} onChange={setColor} />
+            <ColorSwatches value={color} onChange={editColor} auto={autoFields.has("color")} />
 
             <div className="grid gap-5 sm:grid-cols-2">
               <BuildingSelect
@@ -283,8 +312,9 @@ export function ItemFlow({ type }: { type: Kind }) {
                 className="sm:col-span-2 lg:col-span-1"
                 label={lost ? "Where do you think you lost it?" : "Where did you find it?"}
                 value={building}
-                onChange={setBuilding}
+                onChange={editBuilding}
                 note={gpsNote}
+                auto={autoFields.has("building")}
               />
               {lost && (
                 <div>
@@ -299,14 +329,29 @@ export function ItemFlow({ type }: { type: Kind }) {
             </div>
 
             <div>
+              <label className="label" htmlFor="brand">
+                Brand / model <span className="font-normal text-muted">(optional)</span>
+                {autoFields.has("brand") && <AutoTag />}
+              </label>
+              <input
+                id="brand"
+                className="field-soft"
+                value={brand}
+                onChange={(e) => editBrand(e.target.value)}
+                placeholder="e.g. iPhone 15, Hydro Flask, JanSport"
+              />
+            </div>
+
+            <div>
               <label className="label" htmlFor="details">
                 Anything else? <span className="font-normal text-muted">(optional)</span>
+                {autoFields.has("details") && <AutoTag />}
               </label>
               <textarea
                 id="details"
                 className="field-soft min-h-20"
                 value={details}
-                onChange={(e) => setDetails(e.target.value)}
+                onChange={(e) => editDetails(e.target.value)}
                 placeholder={lost ? "e.g. Clear case with a Bulls sticker" : "What it looks like. Skip anything private."}
               />
             </div>

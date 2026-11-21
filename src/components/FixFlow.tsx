@@ -1,17 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { findBuilding, nearestBuilding } from "@/lib/buildings";
 import { buildFixEmail, formText, type FixDetails } from "@/lib/mail";
-import { blobToBase64, compressImage, readGps } from "@/lib/photo";
+import { analyzePhoto, type AutoResult } from "@/lib/autofill";
+import { readGps } from "@/lib/photo";
 import { fixChannel } from "@/lib/routing";
 import { saveReport } from "@/lib/save";
 import { setStatus } from "@/lib/store";
 import { ISSUE_LABELS, ISSUE_TYPES, type IssueType, type Report } from "@/lib/types";
 import { useOffices } from "@/lib/useOffices";
-import { BuildingSelect, ChoiceGrid, ErrorNote, PageHead, PhotoDrop, SectionHead, type Photo } from "./fields";
-import { CheckIcon, ChevronRight, SendIcon, SparkIcon } from "./Icons";
+import {
+  AutofillBanner,
+  AutoTag,
+  BuildingSelect,
+  ChoiceGrid,
+  ErrorNote,
+  PageHead,
+  PhotoDrop,
+  SectionHead,
+  type AutoState,
+  type Photo,
+} from "./fields";
+import { CheckIcon, ChevronRight, SendIcon } from "./Icons";
+
+type FixField = "issue" | "details" | "building";
 
 export function FixFlow() {
   const offices = useOffices();
@@ -27,8 +41,11 @@ export function FixFlow() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ report: Report; via: string } | null>(null);
   const [copied, setCopied] = useState(false);
-  const [ai, setAi] = useState<{ state: "idle" | "busy" | "done" | "error"; msg?: string }>({ state: "idle" });
-  const [aiEnabled, setAiEnabled] = useState<boolean | null>(null);
+  const [auto, setAuto] = useState<AutoState>({ state: "idle" });
+  const [autoFields, setAutoFields] = useState<Set<FixField>>(new Set());
+  const touched = useRef<Set<FixField>>(new Set());
+  const runId = useRef(0);
+  const undoSnap = useRef<{ issue: IssueType | ""; details: string; building: string } | null>(null);
 
   const channel = building ? fixChannel(offices, building) : null;
   const details4: FixDetails = {
@@ -46,44 +63,66 @@ export function FixFlow() {
   ];
   const nDone = checks.filter((c) => c.ok).length;
 
+  const userEdit = (f: FixField) => {
+    touched.current.add(f);
+    setAutoFields((s) => {
+      if (!s.has(f)) return s;
+      const n = new Set(s);
+      n.delete(f);
+      return n;
+    });
+  };
+
   async function onPhotos(next: Photo[]) {
+    const isNew = !!next[0] && next[0] !== photos[0];
     setPhotos(next);
-    setAi({ state: "idle" });
-    if (aiEnabled === null)
-      fetch("/api/analyze")
-        .then((r) => r.json())
-        .then((j) => setAiEnabled(!!j.enabled))
-        .catch(() => setAiEnabled(false));
-    if (!next[0]) return;
-    const g = await readGps(next[0].file);
+    if (!next[0]) {
+      setAuto({ state: "idle" });
+      return;
+    }
+    if (isNew) autofill(next[0].file);
+  }
+
+  /** Runs as soon as a photo is added: GPS -> building, Gemini -> issue type + description. */
+  async function autofill(file: File) {
+    const id = ++runId.current;
+    setAuto({ state: "busy" });
+    const [g, r] = await Promise.all([readGps(file), analyzePhoto(file, "broken").catch((): AutoResult => ({ source: "none" }))]);
+    if (id !== runId.current) return;
+    undoSnap.current = { issue, details, building };
+    const filled = new Set<FixField>();
     setGps(g);
     if (g) {
       const b = nearestBuilding(g.lat, g.lng);
-      if (b) {
+      if (b && !touched.current.has("building")) {
         setBuilding(b.name);
         setGpsNote(`Location from photo: ${b.name}`);
+        filled.add("building");
       }
     }
+    if (r.issue_type && !touched.current.has("issue")) {
+      setIssue(r.issue_type);
+      filled.add("issue");
+    }
+    if (r.description && !touched.current.has("details")) {
+      setDetails(r.description);
+      filled.add("details");
+    }
+    setAutoFields(filled);
+    setAuto({ state: "done", source: filled.size ? "ai" : r.source, count: filled.size });
   }
 
-  async function runAi() {
-    if (!photos[0]) return;
-    setAi({ state: "busy" });
-    try {
-      const image = await blobToBase64(await compressImage(photos[0].file, 768, 0.7));
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image, mode: "broken" }),
-      });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || "AI failed");
-      if (j.issue_type && (ISSUE_TYPES as readonly string[]).includes(j.issue_type)) setIssue(j.issue_type);
-      if (j.description && !details) setDetails(j.description);
-      setAi({ state: "done", msg: "Filled in from your photo. Fix anything that's off." });
-    } catch (e) {
-      setAi({ state: "error", msg: `${(e as Error).message}. You can fill it in by hand.` });
+  function undoAutofill() {
+    const s = undoSnap.current;
+    if (!s) return;
+    if (autoFields.has("issue")) setIssue(s.issue);
+    if (autoFields.has("details")) setDetails(s.details);
+    if (autoFields.has("building")) {
+      setBuilding(s.building);
+      setGpsNote(null);
     }
+    setAutoFields(new Set());
+    setAuto({ state: "idle" });
   }
 
   function validate() {
@@ -194,33 +233,51 @@ export function FixFlow() {
           <div className="panel space-y-7">
             <div>
               <PhotoDrop photos={photos} max={1} onChange={onPhotos} label="Photo of the problem" />
-              {photos.length > 0 && aiEnabled && (
-                <div className="mt-3">
-                  <button type="button" onClick={runAi} disabled={ai.state === "busy"} className="btn-ghost w-full py-2.5 text-sm">
-                    <SparkIcon /> {ai.state === "busy" ? "Looking at your photo..." : "Fill in from photo"}
-                  </button>
-                  {ai.msg && <p className={`mt-1.5 text-sm ${ai.state === "error" ? "text-red-700" : "text-muted"}`}>{ai.msg}</p>}
-                </div>
-              )}
+              <AutofillBanner auto={auto} onUndo={auto.count ? undoAutofill : undefined} />
             </div>
 
-            <ChoiceGrid label="What's the problem?" options={ISSUE_TYPES} labels={ISSUE_LABELS} value={issue} onChange={setIssue} />
+            <ChoiceGrid
+              label="What's the problem?"
+              options={ISSUE_TYPES}
+              labels={ISSUE_LABELS}
+              value={issue}
+              onChange={(v) => {
+                userEdit("issue");
+                setIssue(v);
+              }}
+              auto={autoFields.has("issue")}
+            />
 
             <div>
               <label className="label" htmlFor="desc">
                 Describe it <span className="font-normal text-muted">(one or two sentences)</span>
+                {autoFields.has("details") && <AutoTag />}
               </label>
               <textarea
                 id="desc"
                 className="field-soft min-h-24"
                 value={details}
-                onChange={(e) => setDetails(e.target.value)}
+                onChange={(e) => {
+                  userEdit("details");
+                  setDetails(e.target.value);
+                }}
                 placeholder="e.g. The light above the study tables is flickering and half the room is dark."
               />
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
-              <BuildingSelect id="building" label="Which building?" value={building} onChange={setBuilding} note={gpsNote} />
+              <BuildingSelect
+                id="building"
+                label="Which building?"
+                value={building}
+                onChange={(v) => {
+                  userEdit("building");
+                  setBuilding(v);
+                  setGpsNote(null);
+                }}
+                note={gpsNote}
+                auto={autoFields.has("building")}
+              />
               <div>
                 <label className="label" htmlFor="spot">
                   Exact spot <span className="font-normal text-muted">(optional)</span>

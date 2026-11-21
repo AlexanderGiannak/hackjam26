@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { ItemCard } from "@/components/ItemCard";
-import { BUILDINGS } from "@/lib/buildings";
+import { BUILDING_GROUPS, BUILDINGS } from "@/lib/buildings";
 import { listReports } from "@/lib/store";
 import { CATEGORIES, CATEGORY_LABELS, type Report } from "@/lib/types";
 
@@ -76,8 +76,12 @@ function Browse() {
         </select>
         <select className="field-soft" value={bld} onChange={(e) => setBld(e.target.value)} aria-label="Building">
           <option value="">All buildings</option>
-          {BUILDINGS.map((b) => (
-            <option key={b.code} value={b.name}>{b.name}</option>
+          {BUILDING_GROUPS.map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {BUILDINGS.filter(g.match).map((b) => (
+                <option key={b.code} value={b.name}>{b.name}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>

@@ -186,3 +186,5 @@ The app also runs with zero config (browser-only demo mode) so the demo has a no
 **Update 2026-11-21 (V1 wireframes):** UI rebuilt to match `HackJam Wireframes V1.pdf`. Added item types (earbuds, tablet, jacket, textbook), issue types (restroom, AC, elevator), exact spot, up to 3 photos on lost reports, MSC Information Desk routing, Lost/Found browse tabs, and a `/contacts` directory. Supabase: re-run `supabase/schema.sql` (adds `spot`, `photo_urls`, new checks).
 
 **Scope decision 2026-11-21:** The app covers the **USF Tampa campus only** (largest campus). Buildings, offices, routing, and the contacts page are all Tampa.
+
+**Update 2026-11-21 (autofill + housing):** Photo autofill now runs automatically on upload (Gemini when `GEMINI_API_KEY` is set, with model fallback 2.5-flash → 3-flash-preview → 2.5-flash-lite; on-device color guess otherwise). Housing list replaced with the 12 residence halls + Holly and Kosove apartments, positions from OpenStreetMap.

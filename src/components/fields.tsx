@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRef } from "react";
-import { BUILDINGS } from "@/lib/buildings";
+import { BUILDING_GROUPS, BUILDINGS } from "@/lib/buildings";
 import { COLOR_SWATCHES } from "@/lib/types";
-import { UploadIcon } from "./Icons";
+import { SparkIcon, UploadIcon } from "./Icons";
 
 export interface Photo {
   file: File;
@@ -134,7 +134,9 @@ export function ChoiceGrid<T extends string>({
   labels,
   value,
   onChange,
+  auto,
 }: {
+  auto?: boolean;
   label: string;
   options: readonly T[];
   labels: Record<T, string>;
@@ -143,7 +145,7 @@ export function ChoiceGrid<T extends string>({
 }) {
   return (
     <fieldset>
-      <legend className="label">{label}</legend>
+      <legend className="label">{label}{auto && <AutoTag />}</legend>
       <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
         {options.map((o) => (
           <button
@@ -161,11 +163,12 @@ export function ChoiceGrid<T extends string>({
   );
 }
 
-export function ColorSwatches({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function ColorSwatches({ value, onChange, auto }: { value: string; onChange: (v: string) => void; auto?: boolean }) {
   return (
     <fieldset>
       <legend className="label">
         Color <span className="font-normal text-muted">· {value || "none picked"}</span>
+        {auto && <AutoTag />}
       </legend>
       <div className="flex flex-wrap gap-2.5">
         {COLOR_SWATCHES.map((c) => (
@@ -194,7 +197,9 @@ export function BuildingSelect({
   onChange,
   note,
   className = "",
+  auto,
 }: {
+  auto?: boolean;
   id: string;
   label: string;
   value: string;
@@ -204,11 +209,15 @@ export function BuildingSelect({
 }) {
   return (
     <div className={className}>
-      <label className="label" htmlFor={id}>{label}</label>
+      <label className="label" htmlFor={id}>{label}{auto && <AutoTag />}</label>
       <select id={id} className="field" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Choose a building</option>
-        {BUILDINGS.map((b) => (
-          <option key={b.code} value={b.name}>{b.name}</option>
+        {BUILDING_GROUPS.map((g) => (
+          <optgroup key={g.label} label={g.label}>
+            {BUILDINGS.filter(g.match).map((b) => (
+              <option key={b.code} value={b.name}>{b.name}</option>
+            ))}
+          </optgroup>
         ))}
       </select>
       {note && <p className="mt-1.5 text-sm text-muted">📍 {note}</p>}
@@ -218,4 +227,50 @@ export function BuildingSelect({
 
 export function ErrorNote({ children }: { children: React.ReactNode }) {
   return <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{children}</p>;
+}
+
+/** Small pill next to a label for values we filled in from the photo. Disappears once the user edits. */
+export function AutoTag() {
+  return (
+    <span className="ml-2 inline-flex translate-y-[-1px] items-center gap-1 rounded-full bg-bull-soft px-2 py-0.5 align-middle text-xs font-semibold text-bull">
+      <SparkIcon className="h-3 w-3" /> Auto-filled
+    </span>
+  );
+}
+
+export type AutoState = { state: "idle" | "busy" | "done"; source?: "ai" | "basic" | "none"; count?: number };
+
+/** Status line under the photo while we read it and after we've filled fields in. */
+export function AutofillBanner({ auto, onUndo }: { auto: AutoState; onUndo?: () => void }) {
+  if (auto.state === "idle") return null;
+  if (auto.state === "busy")
+    return (
+      <div className="mt-3 flex items-center gap-3 rounded-2xl border border-bull/30 bg-bull-soft p-3.5 text-[15px] text-bull">
+        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-bull border-t-transparent" />
+        Reading your photo and filling in the details...
+      </div>
+    );
+  if (!auto.count) {
+    return auto.source === "none" ? null : (
+      <p className="mt-3 text-sm text-muted">We couldn&apos;t read much from this photo. Fill in the details below.</p>
+    );
+  }
+  return (
+    <div className="mt-3 flex items-start gap-3 rounded-2xl border border-bull/30 bg-bull-soft p-3.5 text-[15px]">
+      <SparkIcon className="mt-0.5 h-5 w-5 shrink-0 text-bull" />
+      <p className="flex-1">
+        <strong>
+          {auto.source === "ai" ? `We filled in ${auto.count} field${auto.count > 1 ? "s" : ""} from your photo.` : "We guessed the color from your photo."}
+        </strong>{" "}
+        {auto.source === "ai"
+          ? "Check the ones marked Auto-filled and edit anything that's off."
+          : "Check it, then pick what the item is."}
+      </p>
+      {onUndo && (
+        <button type="button" onClick={onUndo} className="link shrink-0 text-sm">
+          Undo
+        </button>
+      )}
+    </div>
+  );
 }
