@@ -18,9 +18,8 @@ const TABS = [
 function Logo() {
   return (
     <Link href="/" className="flex items-center gap-3">
-      <span aria-hidden className="flex h-10 w-10 items-center justify-center rounded-xl border border-dashed border-white/70 text-lg">
-        📣
-      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.png" alt="" width={40} height={40} className="h-10 w-10 rounded-xl ring-1 ring-white/30" />
       <span className="text-xl font-bold tracking-tight">{APP_NAME}</span>
     </Link>
   );

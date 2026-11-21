@@ -1,4 +1,4 @@
-# 📣 Bullhorn: report anything at USF
+# <img src="public/icon-192.png" width="40" align="center" alt=""> Bullhorn: report anything at USF
 
 **See it. Snap it. USF hears it.** HackJam 2026, Home Turf track.
 

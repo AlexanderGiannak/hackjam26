@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: `${APP_NAME}: report anything at USF`,
   description: "Lost it, found it, or spotted something broken, a pothole or bad parking on the USF Tampa campus? We already know which office to tell.",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/icon.svg", apple: "/apple-icon.png" },
+  icons: { icon: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/apple-icon.png" },
   appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "default" },
 };
 
