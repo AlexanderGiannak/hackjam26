@@ -495,7 +495,7 @@ function ReportFlow() {
           <p className="font-semibold text-amber-900">
             {dupes.length === 1 ? "Someone already reported this" : `${dupes.length} reports of this already`}, {Math.round(dupes[0].meters)} m away
           </p>
-          <p className="text-sm text-amber-900/80">Add yours to theirs: more votes move it up USF&apos;s list, and you&apos;ll get their updates.</p>
+          <p className="text-sm text-amber-900/80">Add yours to theirs: more votes move it up USF&apos;s list, and you&apos;ll get its updates on this phone.</p>
           <div className="mt-3 space-y-2">
             {dupes.slice(0, 3).map((d) => (
               <div key={d.report.id} className="flex items-center gap-3 rounded-xl bg-white p-2">

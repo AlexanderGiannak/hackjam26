@@ -51,7 +51,14 @@ export default function OpsPage() {
   }, [pass, load]);
 
   const stats = useMemo(() => (rows ? computeStats(rows) : null), [rows]);
-  const clusters = useMemo(() => (rows ? clusterIssues(rows).slice(0, 6) : []), [rows]);
+  const allClusters = useMemo(() => (rows ? clusterIssues(rows) : []), [rows]);
+  const clusters = allClusters.slice(0, 6);
+  // report id -> the other reports of the same problem, so one update can close all of them
+  const siblings = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const c of allClusters) for (const r of c.reports) m.set(r.id, c.reports.filter((x) => x.id !== r.id).map((x) => x.id));
+    return m;
+  }, [allClusters]);
   const queue = useMemo(() => {
     const now = Date.now();
     return (rows ?? [])
@@ -85,10 +92,11 @@ export default function OpsPage() {
     );
   }
 
-  async function update(id: string, status: Status, note: string) {
+  async function update(ids: string[], status: Status, note: string) {
     try {
-      const r = await setStatus(id, status, note, pass);
-      setRows((rs) => rs?.map((x) => (x.id === id ? r : x)) ?? null);
+      const updated = await Promise.all(ids.map((id) => setStatus(id, status, note, pass)));
+      const byId = new Map(updated.map((r) => [r.id, r]));
+      setRows((rs) => rs?.map((x) => byId.get(x.id) ?? x) ?? null);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -194,7 +202,7 @@ export default function OpsPage() {
         </div>
         {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
         {queue.map((r) => (
-          <QueueRow key={r.id} report={r} focused={r.id === focus} onUpdate={update} />
+          <QueueRow key={r.id} report={r} focused={r.id === focus} siblings={siblings.get(r.id) ?? []} onUpdate={update} />
         ))}
       </section>
     </div>
@@ -210,9 +218,20 @@ function Kpi({ n, label, tone }: { n: number | string; label: string; tone?: "re
   );
 }
 
-function QueueRow({ report: r, focused, onUpdate }: { report: Report; focused: boolean; onUpdate: (id: string, s: Status, note: string) => void }) {
+function QueueRow({
+  report: r,
+  focused,
+  siblings,
+  onUpdate,
+}: {
+  report: Report;
+  focused: boolean;
+  siblings: string[];
+  onUpdate: (ids: string[], s: Status, note: string) => void;
+}) {
   const [status, setStatusDraft] = useState<Status>(r.status);
   const [note, setNote] = useState("");
+  const [all, setAll] = useState(true);
   useEffect(() => setStatusDraft(r.status), [r.status]);
   const office = OFFICES.find((o) => o.id === r.office_id);
   return (
@@ -233,10 +252,10 @@ function QueueRow({ report: r, focused, onUpdate }: { report: Report; focused: b
         </div>
       </div>
       <form
-        className="flex flex-wrap items-center gap-2 sm:w-[380px] sm:flex-nowrap"
+        className="flex flex-wrap items-center gap-2 sm:w-[380px]"
         onSubmit={(e) => {
           e.preventDefault();
-          onUpdate(r.id, status, note);
+          onUpdate(all ? [r.id, ...siblings] : [r.id], status, note);
           setNote("");
         }}
       >
@@ -247,6 +266,12 @@ function QueueRow({ report: r, focused, onUpdate }: { report: Report; focused: b
         </select>
         <input className="field min-w-0 flex-1 py-2 text-sm" placeholder="Note for the student" value={note} onChange={(e) => setNote(e.target.value)} maxLength={280} />
         <button className="btn-primary px-3 py-2 text-sm" disabled={status === r.status && !note}>Update</button>
+        {siblings.length > 0 && (
+          <label className="flex w-full items-center gap-1.5 text-xs text-neutral-600">
+            <input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} className="accent-bull" />
+            Also update the {siblings.length} other report{siblings.length > 1 ? "s" : ""} of this problem
+          </label>
+        )}
       </form>
     </div>
   );

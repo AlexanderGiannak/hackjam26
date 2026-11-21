@@ -1,4 +1,4 @@
-import { COLORS, ISSUE_TYPES, ITEM_CATEGORIES, SEVERITIES, type Category, type IssueType, type Severity } from "./types";
+import { ISSUE_TYPES, ITEM_CATEGORIES, SEVERITIES, type Category, type IssueType, type Severity } from "./types";
 
 export interface SensitiveBox {
   label: "face" | "plate" | "card" | "screen";
@@ -46,7 +46,7 @@ export function normalizeAnalysis(raw: unknown): Analysis {
     title: str(r.title, 60),
     description: str(r.description, 200),
     category: sensitive.some((s) => s.label === "card") && kind === "item" ? "id_card" : category,
-    color: kind === "item" ? ((COLORS as readonly string[]).includes(colorRaw) ? colorRaw : colorRaw || null) : null,
+    color: kind === "item" ? colorRaw || null : null,
     brand: kind === "item" ? str(r.brand, 40) || null : null,
     tags: Array.isArray(r.tags) ? r.tags.map((t) => str(t, 30)).filter(Boolean).slice(0, 6) : [],
     issue_type: kind === "issue" ? (oneOf(r.issue_type, ISSUE_TYPES) ?? "other") : null,

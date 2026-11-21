@@ -39,6 +39,11 @@ export class SupabaseRepo implements Repo {
     const { error } = await this.c.from("reports").update(patch).eq("id", id);
     if (error) throw error;
   }
+  async incrementMeToo(id: string): Promise<number> {
+    const { data, error } = await this.c.rpc("increment_me_too", { rid: id });
+    if (error) throw error;
+    return data as number;
+  }
   async vote(id: string, voter: string): Promise<boolean> {
     const { error } = await this.c.from("me_too_votes").insert({ report_id: id, voter });
     if (!error) return true;

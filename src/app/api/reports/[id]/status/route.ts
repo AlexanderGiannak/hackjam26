@@ -7,5 +7,5 @@ export const runtime = "nodejs";
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!sameOrigin(req)) return json({ error: "Cross-site request refused" }, 403);
   const { id } = await params;
-  return handle(async (repo) => json({ report: await changeStatus(repo, id, await req.json(), actorFrom(req)) }));
+  return handle(async (repo) => json({ report: await changeStatus(repo, id, await req.json().catch(() => null), actorFrom(req)) }));
 }

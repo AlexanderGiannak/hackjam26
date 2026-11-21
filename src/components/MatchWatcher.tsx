@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { mine, myReports } from "@/lib/client";
+import { following, mine, myReports } from "@/lib/client";
 import { reportTitle, statusLabel, type Status } from "@/lib/types";
 
 const SEEN = "bullhorn.seen.v1";
@@ -36,11 +37,14 @@ interface Toast {
 export function MatchWatcher() {
   const [toast, setToast] = useState<Toast | null>(null);
   const busy = useRef(false);
+  // The staff console is not a student: it must not consume (mark seen) the student's alerts.
+  const staff = usePathname().startsWith("/ops");
 
   useEffect(() => {
+    if (staff) return;
     let stop = false;
     async function tick() {
-      if (busy.current || stop || document.hidden || mine().length === 0) return;
+      if (busy.current || stop || document.hidden || (mine().length === 0 && following().length === 0)) return;
       busy.current = true;
       try {
         const seen = readSeen();
@@ -73,9 +77,9 @@ export function MatchWatcher() {
       stop = true;
       clearInterval(t);
     };
-  }, []);
+  }, [staff]);
 
-  if (!toast) return null;
+  if (!toast || staff) return null;
   return (
     <div className="pop-in fixed inset-x-0 bottom-24 z-40 mx-auto max-w-xl px-4">
       <div className="card flex items-start gap-3 border-bull shadow-lg">
@@ -83,7 +87,7 @@ export function MatchWatcher() {
           <p className="font-semibold">{toast.title}</p>
           <p className="mt-0.5 line-clamp-2 text-sm text-neutral-600">{toast.body}</p>
           <Link href={`/r/${toast.id}`} onClick={() => setToast(null)} className="mt-2 inline-block text-sm font-semibold text-bull underline">
-            Open my report
+            Open report
           </Link>
         </div>
         <button onClick={() => setToast(null)} className="text-neutral-400" aria-label="Dismiss">

@@ -54,6 +54,13 @@ create table public.me_too_votes (
   primary key (report_id, voter)
 );
 
+-- Atomic "+1" so two simultaneous votes never overwrite each other. Server (service role) only.
+create or replace function public.increment_me_too(rid text) returns int
+language sql as $$
+  update public.reports set me_too_count = me_too_count + 1, updated_at = now() where id = rid returning me_too_count
+$$;
+revoke execute on function public.increment_me_too(text) from public, anon, authenticated;
+
 alter table public.reports enable row level security;
 alter table public.me_too_votes enable row level security;
 -- Intentionally no policies: only the service role (server) can touch these tables.

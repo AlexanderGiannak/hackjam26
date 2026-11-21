@@ -61,7 +61,7 @@ export default function Home() {
         <MapView
           className="h-56 w-full"
           zoom={15}
-          markers={openIssues.map((r) => ({
+          markers={openIssues.filter((r) => r.lat != null && r.lng != null).map((r) => ({
             id: r.id,
             lat: r.lat!,
             lng: r.lng!,
