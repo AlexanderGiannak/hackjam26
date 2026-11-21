@@ -19,4 +19,22 @@ They belong to USF; replace them if USF asks, or before using the app beyond the
 | HOL | https://www.usf.edu/housing/images/housing-options/apartment-style/holly-apartments/holly-apt-exterior.jpg |
 | KOS | https://www.usf.edu/housing/images/housing-options/apartment-style/kosove-apartments/kosove-hall-exterior.jpg |
 
-Still missing (no photo found on usf.edu yet): LIB, MDL, MSC, REC, BSN, ENB, ISA, CPR, SOC, CIS, GRK.
+## Wikimedia Commons photos
+
+Freely licensed; credit is required wherever the photos are shown or shared. Cropped to 4:3 and resized to 800x600.
+
+| Code | Photo | Author | License |
+|---|---|---|---|
+| LIB | [USF Library.jpg](https://commons.wikimedia.org/wiki/File:USF_Library.jpg) | James E. Scholz | CC BY-SA 4.0 |
+| MSC | [USF Marshall Student Center bulls.jpg](https://commons.wikimedia.org/wiki/File:USF_Marshall_Student_Center_bulls.jpg) | USF13 | CC BY-SA 4.0 |
+| REC | [Campusrec usf tampa.jpg](https://commons.wikimedia.org/wiki/File:Campusrec_usf_tampa.jpg) | FightingRaven531 | CC BY-SA 3.0 |
+| BSN | [Usf cob tampa.jpg](https://commons.wikimedia.org/wiki/File:Usf_cob_tampa.jpg) | FightingRaven531 | CC BY-SA 3.0 |
+| ENB | [USFHellEngineering.jpg](https://commons.wikimedia.org/wiki/File:USFHellEngineering.jpg) | FrancisHG | CC BY-SA 3.0 |
+| ISA | [Interdisciplinary Sciences Building North University of South Florida 2024.jpg](https://commons.wikimedia.org/wiki/File:Interdisciplinary_Sciences_Building_North_University_of_South_Florida_2024.jpg) | Trevorrrrvalent | CC BY 4.0 |
+| CIS | [University of South Florida School of Information building.jpg](https://commons.wikimedia.org/wiki/File:University_of_South_Florida_School_of_Information_building.jpg) | Jescholz2 | CC BY-SA 4.0 |
+
+## Map snapshots
+
+No free photo exists yet for MDL, CPR, SOC, GRK, or HON (Judy Genshaft Honors College), so these are
+OpenStreetMap snapshots (zoom 18) with a pin on the building centroid. Map data © OpenStreetMap contributors (ODbL);
+the credit is printed on each image. Swap in a real photo by replacing the file with the same name.

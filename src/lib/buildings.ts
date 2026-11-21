@@ -27,6 +27,7 @@ export const BUILDINGS: Building[] = [
   { code: "CPR", name: "Cooper Hall", kind: "academic", lat: 28.0595, lng: -82.4108 },
   { code: "SOC", name: "Social Sciences", kind: "academic", lat: 28.0614, lng: -82.4097 },
   { code: "CIS", name: "Communication and Information Sciences", kind: "academic", lat: 28.0585, lng: -82.4111 },
+  { code: "HON", name: "Judy Genshaft Honors College", kind: "academic", lat: 28.0596, lng: -82.4094 },
   // Residence halls (traditional & suite-style). Centroids from OpenStreetMap, 2026-11-21.
   { code: "BEA", name: "Beacon Hall", kind: "dorm", lat: 28.0674, lng: -82.4126 },
   { code: "BET", name: "Beta Hall", kind: "dorm", lat: 28.065, lng: -82.4093 },
@@ -44,6 +45,38 @@ export const BUILDINGS: Building[] = [
   { code: "HOL", name: "Holly Apartments", kind: "dorm", lat: 28.0657, lng: -82.4104 },
   { code: "KOS", name: "Kosove Hall / Kosove Apartments", kind: "dorm", lat: 28.0646, lng: -82.4114 },
 ];
+
+/**
+ * Extra words people use for each building, for search ("gym" -> Rec Center, "food" -> MSC).
+ * Each building's kind also adds generic words (see KIND_TERMS in buildingSearch.ts).
+ */
+export const BUILDING_TERMS: Record<string, string> = {
+  LIB: "main library, books, study, study rooms, quiet, computers, printing, USF Card Center, ID card",
+  MDL: "health sciences library, medical library, medicine, nursing, public health, USF Health, study",
+  MSC: "Marshall Center, student union, food court, dining, food, eat, lunch, coffee, bookstore, textbooks, events, ballroom, information desk",
+  REC: "rec, gym, fitness, workout, weights, lift, exercise, pool, swim, basketball, courts",
+  BSN: "business, Muma, business administration, accounting, finance, marketing, management",
+  ENB: "engineering, ENB, labs, computer science, computer engineering",
+  ISA: "science, sciences, chemistry, biology, labs, research",
+  CPR: "arts and sciences, humanities, math, English, classes, lecture halls",
+  SOC: "social sciences, sociology, anthropology, political science, classes",
+  CIS: "communication, information sciences, mass communications, journalism, advertising, media",
+  HON: "honors, honors college, Genshaft, honors students, honors advising",
+  BEA: "The Village",
+  END: "The Village",
+  HOR: "The Village",
+  PIN: "The Village",
+  SUM: "The Village",
+  BET: "traditional hall",
+  CAS: "Betty Castor, traditional hall",
+  CYP: "suite-style",
+  JUN: "suite-style",
+  MAP: "suite-style",
+  POP: "suite-style",
+  GRK: "Greek, fraternity, sorority, Greek life",
+  HOL: "apartments, apartment-style",
+  KOS: "apartments, apartment-style",
+};
 
 /** Dropdown sections, in display order. */
 export const BUILDING_GROUPS: { label: string; match: (b: Building) => boolean }[] = [

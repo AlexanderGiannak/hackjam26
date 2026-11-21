@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BUILDING_GROUPS, BUILDINGS, findBuilding, type Building } from "@/lib/buildings";
+import { localSearch } from "@/lib/buildingSearch";
 import { COLOR_SWATCHES } from "@/lib/types";
 import { ChevronRight, SparkIcon, UploadIcon } from "./Icons";
 
@@ -235,6 +236,7 @@ const BLURBS: Record<string, string> = {
   REC: "Gym, pools, courts",
   BSN: "Business college",
   ENB: "Engineering labs",
+  HON: "Honors college",
   HOL: "Apartments",
   KOS: "Apartments",
   GRK: "Greek housing",
@@ -249,7 +251,14 @@ export const buildingBlurb = (b: Building) => BLURBS[b.code] ?? KIND_BLURB[b.kin
 
 /** Stand-in for a building photo (V2 shows "Photo of building"): the building code on a tinted tile. */
 /** Buildings with a photo in public/buildings (sources in public/buildings/SOURCES.md). */
-const PHOTOS = new Set(["BEA", "BET", "CAS", "CYP", "END", "HOR", "JUN", "MAP", "PIN", "POP", "SUM", "HOL", "KOS"]);
+const PHOTOS = new Set([
+  // residence halls (USF Housing photos)
+  "BEA", "BET", "CAS", "CYP", "END", "HOR", "JUN", "MAP", "PIN", "POP", "SUM", "HOL", "KOS",
+  // Wikimedia Commons photos
+  "LIB", "MSC", "REC", "BSN", "ENB", "ISA", "CIS",
+  // pinned OpenStreetMap snapshots (no free photo found yet)
+  "MDL", "CPR", "SOC", "GRK", "HON",
+]);
 
 function BuildingTile({ b, small }: { b: Building; small?: boolean }) {
   if (PHOTOS.has(b.code))
@@ -294,8 +303,33 @@ export function BuildingPicker({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const chosen = findBuilding(value);
-  const term = q.trim().toLowerCase();
-  const hit = (b: Building) => !term || b.name.toLowerCase().includes(term) || b.code.toLowerCase() === term;
+  const term = q.trim();
+  const scored = term ? localSearch(term) : [];
+  // Ask for meaning-based matches only when keywords found nothing solid (a real name/keyword hit scores >= 3).
+  const semantic = useSemanticBuildings(open && !(scored[0]?.score >= 3) ? term : "");
+  const pick = (b: Building) => {
+    onChange(b.name);
+    setOpen(false);
+    setQ("");
+  };
+  const card = (b: Building) => (
+    <button
+      type="button"
+      key={b.code}
+      onClick={() => pick(b)}
+      className={`rounded-xl border p-2 text-left transition hover:border-bull ${value === b.name ? "border-bull ring-2 ring-bull/30" : "border-line"}`}
+    >
+      <BuildingTile b={b} />
+      <span className="mt-1.5 block text-sm font-semibold leading-tight">{b.name}</span>
+      <span className="block text-xs text-muted">{buildingBlurb(b)}</span>
+    </button>
+  );
+  // While searching: keyword hits first (instant), then buildings that only match by meaning.
+  const local = scored.map((r) => r.b);
+  const related = semantic.codes
+    .filter((c) => !local.some((b) => b.code === c))
+    .map((c) => BUILDINGS.find((b) => b.code === c))
+    .filter((b): b is Building => !!b);
   return (
     <div>
       <p className="label">{label}{auto && <AutoTag />}</p>
@@ -313,35 +347,47 @@ export function BuildingPicker({
         {open && (
           <div className="border-t border-line p-3">
             <p className="mb-2 text-sm text-muted">Tap a building. The codes match the signs on campus.</p>
-            <input className="field-soft mb-3 py-2 text-sm" placeholder="Search buildings" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input
+              className="field-soft mb-3 py-2 text-sm"
+              placeholder='Search: "gym", "food", "honors", a code like ENB'
+              aria-label="Search buildings"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
             <div className="max-h-[26rem] space-y-4 overflow-y-auto pr-1">
-              {BUILDING_GROUPS.map((g) => {
-                const list = BUILDINGS.filter(g.match).filter(hit);
-                if (!list.length) return null;
-                return (
-                  <div key={g.label}>
-                    <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-muted">{g.label}</p>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {list.map((b) => (
-                        <button
-                          type="button"
-                          key={b.code}
-                          onClick={() => {
-                            onChange(b.name);
-                            setOpen(false);
-                            setQ("");
-                          }}
-                          className={`rounded-xl border p-2 text-left transition hover:border-bull ${value === b.name ? "border-bull ring-2 ring-bull/30" : "border-line"}`}
-                        >
-                          <BuildingTile b={b} />
-                          <span className="mt-1.5 block text-sm font-semibold leading-tight">{b.name}</span>
-                          <span className="block text-xs text-muted">{buildingBlurb(b)}</span>
-                        </button>
-                      ))}
+              {term ? (
+                <>
+                  {local.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-muted">Matches</p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{local.map(card)}</div>
                     </div>
-                  </div>
-                );
-              })}
+                  )}
+                  {related.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-muted">
+                        <SparkIcon className="h-3.5 w-3.5" /> {local.length ? "Related" : "Closest by meaning"}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{related.map(card)}</div>
+                    </div>
+                  )}
+                  {semantic.loading && <p className="text-xs text-muted">Searching by meaning…</p>}
+                  {!local.length && !related.length && !semantic.loading && (
+                    <p className="text-sm text-muted">No building matches “{term}”. Try a code (ENB), or words like gym, food, library.</p>
+                  )}
+                </>
+              ) : (
+                BUILDING_GROUPS.map((g) => {
+                  const list = BUILDINGS.filter(g.match);
+                  if (!list.length) return null;
+                  return (
+                    <div key={g.label}>
+                      <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-muted">{g.label}</p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{list.map(card)}</div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         )}
@@ -349,6 +395,35 @@ export function BuildingPicker({
       {note && <p className="mt-1.5 text-sm text-muted">📍 {note}</p>}
     </div>
   );
+}
+
+/**
+ * Asks /api/building-search for buildings that match the query by meaning (Gemini embeddings),
+ * debounced. Returns nothing when AI is off; keyword search still works.
+ */
+function useSemanticBuildings(term: string): { codes: string[]; loading: boolean } {
+  const [state, setState] = useState<{ term: string; codes: string[] }>({ term: "", codes: [] });
+  const q = term.trim().toLowerCase();
+  const active = q.length >= 3;
+  useEffect(() => {
+    if (!active) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/building-search?q=${encodeURIComponent(q)}`, { signal: ctrl.signal });
+        const json = (await res.json()) as { results?: { code: string }[] };
+        setState({ term: q, codes: (json.results ?? []).map((r) => r.code) });
+      } catch {
+        if (!ctrl.signal.aborted) setState({ term: q, codes: [] });
+      }
+    }, 300);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [q, active]);
+  if (!active) return { codes: [], loading: false };
+  return state.term === q ? { codes: state.codes, loading: false } : { codes: [], loading: true };
 }
 
 /** Card with a light green tint used for tips and nudges ("Most earbuds show up in Find My"). */
