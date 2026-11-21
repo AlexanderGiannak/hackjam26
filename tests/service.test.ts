@@ -237,3 +237,27 @@ describe("turn-in, drop-off code and desk check-in", () => {
     expect(JSON.stringify(pubAfter.report)).not.toContain("MSC-0142");
   });
 });
+
+describe("I found this", () => {
+  it("counts one thumbs-up per device and sends details only to the owner", async () => {
+    const repo = new MemoryRepo();
+    const lost = await svc.createReport(repo, input({ type: "lost", category: "earbuds", color: "white", building: "Cooper Hall" }), []);
+    expect((await svc.foundThis(repo, lost.report.id, "device-a", {})).count).toBe(1);
+    expect((await svc.foundThis(repo, lost.report.id, "device-a", {})).counted).toBe(false);
+    const r = await svc.foundThis(repo, lost.report.id, "device-b", { state: "turned_in", building: "Marshall Student Center", spot: "info desk", note: "Left it with the person at the counter" });
+    expect(r).toEqual({ count: 2, counted: true, sent: true });
+    const pub = await svc.getReport(repo, lost.report.id, anyone);
+    expect(pub.report.me_too_count).toBe(2);
+    expect(JSON.stringify(pub.report)).not.toContain("counter");
+    const mine = await svc.getReport(repo, lost.report.id, owner(lost.token));
+    expect(mine.report.events.at(-1)).toMatchObject({ by: "finder", private: true, note: "Someone found it and turned it in at Marshall Student Center, info desk. Note: Left it with the person at the counter" });
+  });
+  it("only works on open lost posts", async () => {
+    const repo = new MemoryRepo();
+    const found = await svc.createReport(repo, input({ type: "found", category: "bottle" }), ["data:image/jpeg;base64,x"]);
+    await expect(svc.foundThis(repo, found.report.id, "d", {})).rejects.toThrow(/Only lost items/);
+    const lost = await svc.createReport(repo, input({ type: "lost", category: "bottle" }), []);
+    await svc.changeStatus(repo, lost.report.id, { status: "resolved" }, owner(lost.token));
+    await expect(svc.foundThis(repo, lost.report.id, "d", {})).rejects.toThrow(/already got it back/);
+  });
+});

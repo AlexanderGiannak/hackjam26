@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { FoundThis } from "@/components/FoundThis";
 import { ItemCard } from "@/components/ItemCard";
 import { BUILDING_GROUPS, BUILDINGS, canonicalBuildingName } from "@/lib/buildings";
 import { listReports } from "@/lib/client";
@@ -52,12 +53,12 @@ function Browse() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Link href="/" className="link text-[15px]">← Back to home</Link>
-          <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">{tab === "found" ? "Found items" : "Lost items"}</h1>
+          <h1 className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">Item search</h1>
           <p className="text-[15px] text-muted">
             {tab === "found" ? (
-              <>Waiting for their owners.</>
+              <>Found items waiting for their owners.</>
             ) : (
-              <>Things students are looking for. Lost something? <Link href="/lost" className="link text-ink">Tell us</Link>.</>
+              <>Lost items students are looking for. Seen one? Tap <strong>I found this</strong>. Lost something? <Link href="/lost" className="link text-ink">Tell us</Link>.</>
             )}
           </p>
         </div>
@@ -119,12 +120,13 @@ function Browse() {
       {rows && rows.length > 0 && filtered.length === 0 && (
         <p className="rounded-2xl border border-dashed border-line bg-white p-5 text-muted">Nothing matches. Try fewer words or clear the filters.</p>
       )}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
         {filtered.map((r) => (
           <ItemCard
             key={r.id}
             report={r}
-            action={tab === "lost" ? { label: "I found this", href: `/found?for=${r.id}` } : { label: "This is mine", href: `/lost?for=${r.id}` }}
+            footer={tab === "lost" ? <FoundThis report={r} /> : undefined}
+            action={tab === "lost" ? undefined : { label: "This is mine", href: `/lost?for=${r.id}` }}
           />
         ))}
       </div>

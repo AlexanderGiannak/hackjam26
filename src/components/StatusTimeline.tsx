@@ -1,7 +1,7 @@
 import { statusLabel, type Report, type Status } from "@/lib/types";
 import { CheckIcon } from "./Icons";
 
-const WHO = { reporter: "You / reporter", staff: "USF staff", system: "FixMyUni" };
+const WHO = { reporter: "You / reporter", staff: "USF staff", system: "FixMyUni", finder: "Someone who found it" };
 
 /** The report's trail, newest last: what happened, when, and who did it. */
 export function StatusTimeline({ report }: { report: Report }) {
@@ -91,7 +91,7 @@ export function StatusSteps({ report, officeName, officeShort }: { report: Repor
               <p className="text-sm text-muted">{done && evs[0] ? fmt(evs[0].at) : s.pending}</p>
               {note && <p className="mt-1 rounded-lg bg-canvas px-2.5 py-1.5 text-sm">{note}</p>}
               {evs
-                .filter((e) => e.private)
+                .filter((e) => e.private && e.by !== "finder")
                 .map((e, j) => (
                   <p key={j} className="mt-1 rounded-lg bg-gold-light px-2.5 py-1.5 text-sm">
                     🔒 {e.note} <span className="text-muted">(only you and USF staff see this)</span>

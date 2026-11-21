@@ -12,7 +12,17 @@ export function timeAgo(iso: string) {
 }
 
 /** Grid card used on Home and Browse. */
-export function ItemCard({ report, action, reason }: { report: Report; action?: { label: string; href: string }; reason?: string }) {
+export function ItemCard({
+  report,
+  action,
+  reason,
+  footer,
+}: {
+  report: Report;
+  action?: { label: string; href: string };
+  reason?: string;
+  footer?: React.ReactNode;
+}) {
   const lost = report.type === "lost";
   const photo = report.photo_urls?.[0] ?? report.photo_url;
   const title = report.type === "issue" ? ISSUE_LABELS[report.issue_type ?? "other"] : itemTitle(report);
@@ -37,6 +47,7 @@ export function ItemCard({ report, action, reason }: { report: Report; action?: 
       </p>
       {report.status !== "open" && <p className="mt-0.5 text-xs font-semibold text-bull">{statusLabel(report.type, report.status)}</p>}
       {reason && <p className="mt-1 text-sm font-medium text-bull">{reason}</p>}
+      {footer && <div className="mt-auto pt-3">{footer}</div>}
       {action && (
         <Link href={action.href} className="link relative z-10 mt-auto pt-2 text-sm text-bull">
           {action.label}

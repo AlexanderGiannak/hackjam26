@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
+import { FoundThis } from "@/components/FoundThis";
 import { XIcon } from "@/components/Icons";
 import { MapView, TYPE_COLORS } from "@/components/MapView";
 import { markSeen } from "@/components/MatchWatcher";
@@ -277,6 +278,7 @@ function LostView({
   }
   const closed = report.status === "resolved";
   const pickup = owner ? [...report.events].reverse().find((e) => e.private && e.ref) : undefined;
+  const tips = owner ? report.events.filter((e) => e.by === "finder") : [];
   return (
     <>
       {pickup && !closed && (
@@ -284,6 +286,27 @@ function LostView({
           <p className="font-bold">Where to get it</p>
           <p>{pickup.note}</p>
         </div>
+      )}
+      {!owner && !closed && report.visibility === "public" && (
+        <section className="rounded-2xl border border-line bg-white p-4">
+          <h2 className="mb-1 text-lg font-bold">Found it, or seen it?</h2>
+          <p className="mb-3 text-[15px] text-muted">Tap below. Add where, and we pass it to the owner privately.</p>
+          <FoundThis report={report} />
+        </section>
+      )}
+      {owner && tips.length > 0 && (
+        <section className="rounded-2xl border-[1.5px] border-bull bg-white p-4">
+          <h2 className="text-lg font-bold">👍 {report.me_too_count} {report.me_too_count === 1 ? "person" : "people"} found this</h2>
+          <p className="text-sm text-muted">Only you and USF staff see these tips.</p>
+          <ul className="mt-3 space-y-2">
+            {[...tips].reverse().map((t, i) => (
+              <li key={i} className="rounded-xl bg-tint px-3 py-2 text-[15px]">
+                {t.note}
+                <span className="block text-xs text-muted">{timeAgo(t.at)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       {owner && !closed && (
         <Link href={`/r/${report.id}/found-by-others`} className="flex items-center justify-between rounded-2xl bg-ink p-4 text-white">

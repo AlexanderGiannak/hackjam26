@@ -138,6 +138,32 @@ export async function meToo(id: string): Promise<{ count: number; counted: boole
   return r;
 }
 
+/** "I found this" on someone's lost post (see service.foundThis). Remembers on this phone that you did. */
+const FOUND_THIS = "bullhorn.found-this.v1";
+export function foundThisIds(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(FOUND_THIS) || "[]");
+  } catch {
+    return [];
+  }
+}
+export async function foundThis(
+  id: string,
+  details: { state?: "have" | "turned_in" | "seen"; building?: string; spot?: string; note?: string } = {},
+): Promise<{ count: number; counted: boolean; sent: boolean }> {
+  const r = isLocalMode
+    ? await svc.foundThis(repo(), id, deviceId(), details)
+    : await call<{ count: number; counted: boolean; sent: boolean }>(`/api/reports/${encodeURIComponent(id)}/found-this`, {
+        method: "POST",
+        body: JSON.stringify(details),
+        headers: { "Content-Type": "application/json" },
+      });
+  try {
+    localStorage.setItem(FOUND_THIS, JSON.stringify([id, ...foundThisIds().filter((x) => x !== id)].slice(0, 100)));
+  } catch {}
+  return r;
+}
+
 export async function setStatus(id: string, status: Status, note = "", ops?: string | null): Promise<Report> {
   if (isLocalMode) return svc.changeStatus(repo(), id, { status, note }, actor(id, ops));
   const body = JSON.stringify({ status, note });

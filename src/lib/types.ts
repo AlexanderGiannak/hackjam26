@@ -126,7 +126,7 @@ export interface ReportEvent {
   at: string;
   status: Status;
   note: string;
-  by: "reporter" | "staff" | "system";
+  by: "reporter" | "staff" | "system" | "finder";
   /** Only the reporter and USF staff see it (e.g. an owner's proof answer). Stripped by publicView. */
   private?: boolean;
   /** the other report this event is about (a claim links the lost and the found report) */

@@ -62,6 +62,14 @@ export const DeskCheckInSchema = z.object({
   hold_until: text(40).default(""),
 });
 
+/** "I found this" on someone's lost post: optional details that go privately to the owner. */
+export const FoundThisSchema = z.object({
+  state: z.enum(["have", "turned_in", "seen"]).default("seen"),
+  building: text(80).default(""),
+  spot: text(120).default(""),
+  note: text(280).default(""),
+});
+
 export class ValidationError extends Error {
   status = 400;
 }

@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { APP_NAME } from "@/lib/brand";
-import { CameraIcon, DocIcon, HomeIcon, MapIcon, TrayIcon } from "./Icons";
+import { CameraIcon, DocIcon, HomeIcon, MapIcon, SearchIcon } from "./Icons";
 
 /** The five student tabs from the V2 wireframes. Report is the raised camera button on phones. */
 const TABS = [
   { href: "/", label: "Home", icon: HomeIcon, on: (p: string) => p === "/" },
   { href: "/issues", label: "Campus", icon: MapIcon, on: (p: string) => p.startsWith("/issues") },
   { href: "/fix", label: "Report", icon: CameraIcon, on: (p: string) => p.startsWith("/fix") },
-  { href: "/browse?type=found", label: "Found", icon: TrayIcon, on: (p: string, t: string | null) => p.startsWith("/found") || (p.startsWith("/browse") && t === "found") },
+  // Item search (lost and found lists, with search). "Search" on the phone tab bar.
+  { href: "/browse", label: "Item search", short: "Search", icon: SearchIcon, on: (p: string) => p.startsWith("/browse") || p.startsWith("/found") },
   { href: "/me", label: "Mine", icon: DocIcon, on: (p: string) => p.startsWith("/me") || p.startsWith("/r/") },
 ];
 
@@ -27,7 +28,6 @@ function Logo() {
 
 function Header() {
   const path = usePathname();
-  const type = useSearchParams().get("type");
   const staff = path.startsWith("/ops");
   return (
     <header className="sticky top-0 z-30 bg-bull text-white">
@@ -38,7 +38,7 @@ function Header() {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 transition ${on(path, type) && !staff ? "bg-white/15" : "hover:bg-white/10"}`}
+              className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 transition ${on(path) && !staff ? "bg-white/15" : "hover:bg-white/10"}`}
             >
               <Icon className="h-4 w-4" />
               {label}
@@ -58,13 +58,14 @@ function Header() {
 
 function BottomNav() {
   const path = usePathname();
-  const type = useSearchParams().get("type");
   if (path.startsWith("/ops")) return null; // the staff console has its own step bar
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
       <div className="mx-auto grid max-w-md grid-cols-5 items-end px-2">
-        {TABS.map(({ href, label, icon: Icon, on }) => {
-          const active = on(path, type);
+        {TABS.map((tab) => {
+          const { href, icon: Icon, on } = tab;
+          const label = ("short" in tab && tab.short) || tab.label;
+          const active = on(path);
           if (label === "Report")
             return (
               <Link key={href} href={href} className="-mt-6 flex flex-col items-center pb-2" aria-label="Snap and report">

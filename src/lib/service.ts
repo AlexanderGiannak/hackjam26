@@ -6,7 +6,7 @@ import { OFFICES } from "./offices";
 import { publicView, visibilityFor, withoutToken } from "./privacy";
 import { assignOffice, foundDropoff } from "./routing";
 import { STATUSES, type IssueType, type Report, type ReportEvent, type Status, type StoredReport } from "./types";
-import { ClaimSchema, DeskCheckInSchema, parseNewReport, StatusChangeSchema, validatePhotoCount, ValidationError } from "./validate";
+import { ClaimSchema, DeskCheckInSchema, FoundThisSchema, parseNewReport, StatusChangeSchema, validatePhotoCount, ValidationError } from "./validate";
 
 /**
  * Business rules, shared by both backends:
@@ -167,6 +167,37 @@ export async function meToo(repo: Repo, id: string, voter: string): Promise<{ co
   const counted = await repo.vote(id, voter);
   if (!counted) return { count: r.me_too_count, counted };
   return { count: await repo.incrementMeToo(id), counted };
+}
+
+/**
+ * "I found this" on someone else's lost post. One thumbs-up per device (same vote table as "me too"), and optional
+ * details (have it / turned it in / saw it, where, a note) that only the owner and USF staff can read.
+ */
+export async function foundThis(
+  repo: Repo,
+  id: string,
+  voter: string,
+  input: unknown,
+): Promise<{ count: number; counted: boolean; sent: boolean }> {
+  const parsed = FoundThisSchema.safeParse(input ?? {});
+  if (!parsed.success) throw new ValidationError(parsed.error.issues[0]?.message ?? "Invalid details");
+  const r = await repo.get(id);
+  if (!r || r.visibility === "private") throw new NotFoundError("Report not found");
+  if (r.type !== "lost") throw new ValidationError("Only lost items take 'I found this'.");
+  if (r.status === "resolved") throw new ValidationError("The owner already got it back.");
+  const counted = await repo.vote(id, voter);
+  const count = counted ? await repo.incrementMeToo(id) : r.me_too_count;
+  const { state, building, spot, note } = parsed.data;
+  const place = [findBuilding(building)?.name ?? "", spot].filter(Boolean).join(", ");
+  if (!place && !note && state === "seen") return { count, counted, sent: false };
+  const fresh = (await repo.get(id))!;
+  if (fresh.events.filter((e) => e.by === "finder").length >= 20) throw new ValidationError("This post already has plenty of tips. Post it as a found item instead.");
+  const what = { have: "Someone found it and still has it", turned_in: "Someone found it and turned it in", seen: "Someone saw it" }[state];
+  const text = `${what}${place ? ` at ${place}` : ""}.${note ? ` Note: ${note}` : ""}`;
+  const at = new Date().toISOString();
+  const events: ReportEvent[] = [...fresh.events, { ...event(fresh.status, text, "finder", at), private: true }];
+  await repo.update(id, { events, updated_at: at });
+  return { count, counted, sent: true };
 }
 
 /** What a reporter may do to their own report (staff may do anything). */
