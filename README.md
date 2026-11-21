@@ -57,3 +57,5 @@ Import the GitHub repo in Vercel, add env vars from `.env.example`, deploy. Push
 - [ ] Add `GEMINI_API_KEY` in Vercel, run "Fill in from photo" on the demo photos once so results are cached.
 - [ ] Replace the placeholder photo on the seeded found phone in Supabase.
 - [ ] Open the Supabase project the day before (free projects pause).
+
+<!-- Test PR to check the Codex reviewer. Safe to close without merging. -->
