@@ -3,7 +3,7 @@ import { createReport, listPublic } from "@/lib/service";
 import { handle, json, limited, sameOrigin, withPhotos } from "@/lib/server/http";
 import { db, uploadPhoto } from "@/lib/server/repo-supabase";
 import { visibilityFor } from "@/lib/privacy";
-import { parseNewReport } from "@/lib/validate";
+import { parseNewReport, validatePhotoCount } from "@/lib/validate";
 
 export const runtime = "nodejs";
 
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     }
     const input = parseNewReport(raw); // validate before touching storage
     const files = form.getAll("photo").filter((p): p is File => typeof p !== "string" && p.size > 0);
-    if (files.length > 3) return json({ error: "At most 3 photos" }, 400);
+    validatePhotoCount(input, files.length);
     for (const f of files) {
       if (f.size > MAX_PHOTO) return json({ error: "Photo is too large" }, 413);
       if (f.type && f.type !== "image/jpeg") return json({ error: "Photo must be a JPEG" }, 415);

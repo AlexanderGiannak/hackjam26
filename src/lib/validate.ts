@@ -56,6 +56,14 @@ export class ValidationError extends Error {
   status = 400;
 }
 
+export function validatePhotoCount(r: Pick<NewReport, "type" | "category">, count: number): void {
+  const max = r.type === "lost" ? 3 : 1;
+  if (count > max) throw new ValidationError(`At most ${max} photo${max > 1 ? "s" : ""} for this kind of report.`);
+  if (r.type === "found" && !count && r.category !== "id_card") {
+    throw new ValidationError("Add a photo so the owner can recognize it.");
+  }
+}
+
 export function parseNewReport(input: unknown): NewReport {
   const r = NewReportSchema.safeParse(input);
   if (!r.success) throw new ValidationError(r.error.issues[0]?.message ?? "Invalid report");

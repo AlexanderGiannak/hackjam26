@@ -6,7 +6,7 @@ import { OFFICES } from "./offices";
 import { publicView, visibilityFor, withoutToken } from "./privacy";
 import { assignOffice, foundDropoff } from "./routing";
 import { STATUSES, type IssueType, type Report, type ReportEvent, type Status, type StoredReport } from "./types";
-import { ClaimSchema, parseNewReport, StatusChangeSchema, ValidationError } from "./validate";
+import { ClaimSchema, parseNewReport, StatusChangeSchema, validatePhotoCount, ValidationError } from "./validate";
 
 /**
  * Business rules, shared by both backends:
@@ -66,11 +66,7 @@ export async function createReport(
   now = new Date(),
 ): Promise<{ report: Report; token: string }> {
   const r = parseNewReport(input);
-  const max = r.type === "lost" ? 3 : 1;
-  if (photos.length > max) throw new ValidationError(`At most ${max} photo${max > 1 ? "s" : ""} for this kind of report.`);
-  if (r.type === "found" && !photos.length && r.category !== "id_card") {
-    throw new ValidationError("Add a photo so the owner can recognize it.");
-  }
+  validatePhotoCount(r, photos.length);
   // A building the student picked wins (if it is a real one). Otherwise the pin decides: at a building -> that
   // building; outdoors (road, lot, lawn) -> no building.
   const picked = findBuilding(r.building)?.name ?? null;

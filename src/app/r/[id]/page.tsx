@@ -60,6 +60,7 @@ function ReportPage() {
         setMatches(shown);
         if (r.owner) markSeen(id, m.length, r.report.status);
       } else if (r.owner || following().includes(id)) markSeen(id, 0, r.report.status);
+      setError(null);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -120,8 +121,8 @@ function ReportPage() {
       )}
       {report.type === "issue" && q.get("new") === "1" && issueCh && (
         <div className="pop-in rounded-2xl bg-bull p-5 text-white">
-          <p className="text-xl font-bold">Sent to {issueCh.office.short}</p>
-          <p className="mt-1 text-white/90">Your report is saved under Mine. This page updates when USF changes its status.</p>
+          <p className="text-xl font-bold">Saved to Fix My Uni</p>
+          <p className="mt-1 text-white/90">Your report is saved under Mine and assigned to {issueCh.office.short}. Saving here does not send it to the office: finish sending your email, submitting their form, or calling them.</p>
         </div>
       )}
       {voted && q.get("new") !== "1" && (
