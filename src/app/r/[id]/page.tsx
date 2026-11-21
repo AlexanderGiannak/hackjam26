@@ -136,7 +136,7 @@ function ReportPage() {
           <p className="text-xs font-bold uppercase tracking-wider text-muted">
             {report.type === "issue" ? "Issue" : report.type} · {timeAgo(report.created_at)}
           </p>
-          <h1 className="text-2xl font-extrabold capitalize leading-tight sm:text-3xl">{reportTitle(report)}</h1>
+          <h1 className="text-2xl font-extrabold leading-tight sm:text-3xl">{reportTitle(report)}</h1>
           <p className="text-[15px] text-muted">
             {placeLabel(report)}
             {report.spot ? `, ${report.spot}` : ""}
@@ -221,7 +221,7 @@ function MatchCard({ m, note, actions }: { m: Match; note: string; actions?: Rea
             {r.type}
           </span>
           <p className="mt-1 text-xs text-muted">{statusLabel(r.type, r.status)} · {timeAgo(r.created_at)}</p>
-          <h3 className="font-bold capitalize leading-tight">{reportTitle(r)}</h3>
+          <h3 className="font-bold leading-tight">{reportTitle(r)}</h3>
           <p className="truncate text-sm text-muted">{placeLabel(r)}</p>
           {r.description && <p className="mt-0.5 line-clamp-2 text-sm">{r.description}</p>}
         </div>

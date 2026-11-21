@@ -130,8 +130,9 @@ export function ItemFlow({ type }: { type: Kind }) {
       photo_urls: [],
       building: building || null,
       spot: null,
-      lat: gps?.lat ?? b?.lat ?? null,
-      lng: gps?.lng ?? b?.lng ?? null,
+      // Photo GPS only while it agrees with the chosen building; if the student picks another building, use that one.
+      lat: (gps && b && nearestBuilding(gps.lat, gps.lng)?.code === b.code ? gps.lat : b?.lat) ?? null,
+      lng: (gps && b && nearestBuilding(gps.lat, gps.lng)?.code === b.code ? gps.lng : b?.lng) ?? null,
       issue_type: null,
       severity: "normal",
       status: "open",

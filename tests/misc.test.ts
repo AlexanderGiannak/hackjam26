@@ -94,3 +94,21 @@ describe("seed data", () => {
     expect(rows.filter((r) => r.issue_type === "parking").every((r) => r.visibility === "private")).toBe(true);
   });
 });
+
+describe("titles", () => {
+  it("doesn't repeat the type when the brand says it, and keeps brand casing", async () => {
+    const { itemTitle } = await import("@/lib/types");
+    expect(itemTitle({ color: "black", brand: "iPhone", category: "phone" })).toBe("Black iPhone");
+    expect(itemTitle({ color: "black", brand: "Hydro Flask", category: "bottle" })).toBe("Black Hydro Flask water bottle");
+    expect(itemTitle({ color: "white", brand: "AirPods", category: "earbuds" })).toBe("White AirPods earbuds");
+  });
+});
+
+describe("titles with custom names", () => {
+  it("keeps the 'Other' item's own name and doesn't drop short words like 'id'", async () => {
+    const { itemTitle } = await import("@/lib/types");
+    expect(itemTitle({ color: "black", brand: null, category: "other", item_name: "Umbrella" })).toBe("Black umbrella");
+    expect(itemTitle({ color: "black", brand: "TI calculator", category: "other", item_name: "calculator" })).toBe("Black TI calculator");
+    expect(itemTitle({ color: "white", brand: "Adidas", category: "id_card" })).toBe("White Adidas id card");
+  });
+});
