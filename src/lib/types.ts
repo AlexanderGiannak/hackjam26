@@ -236,6 +236,8 @@ export function itemTitle(r: { color: string | null; category: Category | null; 
   if (!r.category) return "";
   const named = r.category === "other" && r.item_name?.trim();
   const label = named ? named.toLowerCase() : CATEGORY_LABELS[r.category].toLowerCase().replace("airpods / earbuds", "earbuds");
-  const t = [r.color, r.brand, label].filter(Boolean).join(" ");
+  // skip the color when the brand text already starts with it ("blue" + "Blue stylus" -> "Blue stylus pen")
+  const color = r.color && r.brand?.toLowerCase().startsWith(r.color.toLowerCase()) ? null : r.color;
+  const t = [color, r.brand, label].filter(Boolean).join(" ");
   return t.charAt(0).toUpperCase() + t.slice(1);
 }

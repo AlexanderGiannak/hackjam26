@@ -102,3 +102,11 @@ describe("seed data", () => {
     expect(rows.filter((r) => r.issue_type === "parking").every((r) => r.visibility === "private")).toBe(true);
   });
 });
+
+describe("item titles", () => {
+  it("doesn't repeat the color when the brand already starts with it", async () => {
+    const { itemTitle } = await import("@/lib/types");
+    expect(itemTitle({ color: "blue", brand: "Blue stylus", category: "other" })).toBe("Blue stylus other");
+    expect(itemTitle({ color: "black", brand: "Hydro Flask", category: "bottle" })).toBe("Black Hydro Flask water bottle");
+  });
+});
