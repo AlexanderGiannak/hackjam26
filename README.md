@@ -50,8 +50,8 @@ Import the GitHub repo in Vercel, add env vars from `.env.example`, deploy. Push
 
 ## Before the demo (team TODO)
 
-- [ ] **Verify every office** (phone, email, URL, hours) against official USF pages, fill the `null`s in
-      `src/lib/offices.ts` **and** the `offices` table, then set `verified = true`. Until then cards show "Unverified".
+- [x] Office phone numbers sourced from official USF pages (2026-11-21, source URLs in `src/lib/offices.ts`).
+- [ ] Confirm hours for the Tampa and Shimberg library desks, then set `verified = true` on those rows.
 - [ ] Confirm building names/coordinates in `src/lib/buildings.ts` against the USF campus map.
 - [ ] Set `NEXT_PUBLIC_TEST_EMAIL` to a teammate. Leave `NEXT_PUBLIC_USE_REAL_FACILITIES_EMAIL=false` until USF says OK.
 - [ ] Add `GEMINI_API_KEY` in Vercel, run "Fill in from photo" on the demo photos once so results are cached.

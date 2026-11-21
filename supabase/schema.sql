@@ -116,23 +116,30 @@ drop policy if exists "public read photos" on storage.objects;
 create policy "public read photos" on storage.objects for select
   using (bucket_id = 'photos');
 
--- ---------- Seed offices: VERIFY EVERY ROW against official USF pages, then set verified = true ----------
+-- ---------- Seed offices: phones checked against official USF pages 2026-11-21 (see src/lib/offices.ts for sources) ----------
+-- Library rows stay verified = false until their hours are confirmed.
 insert into public.offices (id, name, handles, categories, hours, always_open, phone, email, url, location, sort_order, verified) values
- ('upd', 'USF Police (Lost & Found)', 'Lost and found property, especially valuables like phones, wallets, and laptops.',
+ ('upd', 'USF Police (Lost & Found)', 'Lost and found property, especially valuables like phones, wallets, and laptops. Emergencies: call 911.',
    '{phone,wallet,laptop,keys,bag,valuables,other}', null, true, '813-974-2628', null,
-   'https://www.usf.edu/administrative-services/university-police/', '4002 E Fowler Ave (USF Police building)', 1, false),
+   'https://www.usf.edu/public-safety/university-police/about/contact-up.aspx', '13152 USF Genshaft Drive, Tampa', 1, true),
  ('card', 'USF Card Center', 'Lost or found USF ID cards. Found IDs should go here, not on a public list.',
-   '{id_card}', '[{"days":[1,2,3,4,5],"open":"08:00","close":"17:00"}]', false, null, null, null, null, 2, false),
- ('lib-tampa', 'Tampa Campus Library Service Desk', 'Items left in the Tampa Campus Library, and library building issues.',
-   '{library}', null, false, '813-974-2729', null, 'https://www.usf.edu/library/', 'Tampa Campus Library, 1st floor', 3, false),
+   '{id_card}', '[{"days":[1,2,3,4,5],"open":"09:00","close":"17:00"}]', false, '813-974-4357', 'help@usf.edu',
+   'https://www.usf.edu/it/resources/usf-card', 'Tampa Campus Library', 2, true),
+ ('lib-tampa', 'Tampa Campus Library Service Desk', 'Items left in the Tampa Campus Library (held 30 days), and library building issues.',
+   '{library}', null, false, '813-974-2729', null, 'https://lib.usf.edu/forms/report-a-problem/', '4101 USF Apple Dr, 1st floor', 3, false),
  ('lib-shimberg', 'Shimberg Health Sciences Library Desk', 'Items left in the Shimberg Health Sciences Library, and library building issues.',
-   '{library}', null, false, null, null, null, 'Shimberg Health Sciences Library', 4, false),
- ('facilities', 'Facilities Service Center', 'Broken lights, doors, fountains, and furniture in non-residential buildings.',
+   '{library}', null, false, '813-974-8432', null, 'https://libraries.health.usf.edu/about/shimberg', '12908 Bruce B. Downs Blvd', 4, false),
+ ('facilities', 'Facilities Service Center', 'Broken lights, doors, fountains, and furniture in non-residential buildings. After-hours emergencies: 813-974-2845 (24/7).',
    '{facilities,lighting,fountain,door,furniture,other}', '[{"days":[1,2,3,4,5],"open":"08:00","close":"17:00"}]', false,
-   null, 'FM-ServiceCenter@usf.edu', null, null, 5, false),
- ('housing', 'Housing & Residential Education Maintenance', 'Maintenance problems in residence halls. Submit through the housing maintenance system.',
-   '{housing}', null, false, null, null, 'https://www.usf.edu/housing/', null, 6, false)
-on conflict (id) do nothing;
+   '813-974-2750', 'FM-ServiceCenter@usf.edu', 'https://www.usf.edu/facilities/service-center/contact-us.aspx',
+   '3820 USF Holly Drive (next to the USF Post Office)', 5, true),
+ ('housing', 'Housing & Residential Education Maintenance', 'Maintenance problems in residence halls. USF Village residents call 813-974-0764. After hours, contact your RA on duty.',
+   '{housing}', '[{"days":[1,2,3,4,5],"open":"08:00","close":"17:00"}]', false, '813-974-3446', null,
+   'https://assetessentials.dudesolutions.com/USFH/', null, 6, true)
+on conflict (id) do update set
+  name = excluded.name, handles = excluded.handles, categories = excluded.categories, hours = excluded.hours,
+  always_open = excluded.always_open, phone = excluded.phone, email = excluded.email, url = excluded.url,
+  location = excluded.location, sort_order = excluded.sort_order, verified = excluded.verified;
 
 -- ---------- Demo seed reports (found phone + lost bottle make the demo matches work) ----------
 -- Found reports need a photo_url; replace the placeholder with a real uploaded photo before the demo.
