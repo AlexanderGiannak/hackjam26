@@ -88,7 +88,7 @@ function ReportPage() {
   async function share() {
     const url = location.origin + `/r/${report!.id}`;
     try {
-      if (navigator.share) await navigator.share({ title: `Bullhorn: ${reportTitle(report!)}`, url });
+      if (navigator.share) await navigator.share({ title: `Fix My Uni: ${reportTitle(report!)}`, url });
       else {
         await navigator.clipboard.writeText(url);
         setCopied(true);

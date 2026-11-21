@@ -219,7 +219,7 @@ export function FixFlow() {
         `Issue: ${ISSUE_LABELS[issue as IssueType]}`,
         `Location: ${[place, spot.trim()].filter(Boolean).join(", ")} (map pin on the report page)`,
         `Details: ${details.trim()}`,
-        dupes.length ? `Reported by: ${joining + 1} students on Bullhorn` : null,
+        dupes.length ? `Reported by: ${joining + 1} students on Fix My Uni` : null,
         `Photo: ${photos.length ? "on the report page (faces and plates blurred)" : "none"}`,
         "",
         "Thank you",
@@ -547,7 +547,7 @@ export function FixFlow() {
                 <input type="checkbox" checked={signIt} onChange={(e) => setSignIt(e.target.checked)} className="h-5 w-5 accent-bull" />
                 Include my name and USF email
               </label>
-              <p className="ml-8 text-sm text-muted">{channel.office.short} can reply to you with questions. Not saved on Bullhorn.</p>
+              <p className="ml-8 text-sm text-muted">{channel.office.short} can reply to you with questions. Not saved on Fix My Uni.</p>
               {signIt && (
                 <div className="ml-8 mt-3 grid gap-2 sm:grid-cols-2">
                   <input className="field-soft py-2" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -572,7 +572,7 @@ export function FixFlow() {
           )}
           {channel.kind === "email" && (
             <button type="button" onClick={() => send(false)} disabled={busy} className="btn-ghost w-full border-bull text-bull">
-              Just save it to Bullhorn, no email
+              Just save it to Fix My Uni, no email
             </button>
           )}
           <p className="text-sm text-muted">

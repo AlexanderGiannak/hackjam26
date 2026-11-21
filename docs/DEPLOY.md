@@ -12,7 +12,7 @@ share the same data, so the two-phone demo works.
 
 ## 1. Supabase: the database (5 min)
 
-1. supabase.com → **New project**. Name it `bullhorn`, set a database password (save it somewhere), region
+1. supabase.com → **New project**. Name it `fix-my-uni`, set a database password (save it somewhere), region
    **East US**. Wait about a minute for it to start.
 2. Left sidebar → **SQL Editor** → **New query**. Paste all of `supabase/schema.sql` → **Run**.
    It should say *Success. No rows returned*. It is safe to run again later; it resets the tables.
@@ -52,7 +52,7 @@ share the same data, so the two-phone demo works.
 4. **Deploy.** It takes about a minute. You get a URL like `https://hackjam26.vercel.app`.
 
 **Which branch goes live?** Vercel's production URL builds from `main`. Every other branch (like
-`feature/bullhorn`) gets its own **preview URL**, shown on the deployment and in the pull request. To demo this
+`feature/my-change`) gets its own **preview URL**, shown on the deployment and in the pull request. To demo this
 branch before merging, use its preview URL, or change the production branch in the project settings (under Git or Environments, depending on the dashboard version).
 
 **Changed an environment variable?** `NEXT_PUBLIC_` values are baked in at build time, so go to **Deployments →

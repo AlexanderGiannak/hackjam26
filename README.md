@@ -1,4 +1,4 @@
-# <img src="public/icon-192.png" width="40" align="center" alt=""> Bullhorn: report anything at USF
+# <img src="public/icon-192.png" width="40" align="center" alt=""> Fix My Uni: report anything at USF
 
 **See it. Snap it. USF hears it.** HackJam 2026, Home Turf track.
 
@@ -7,7 +7,7 @@ these every day and say nothing, because nobody knows *which* of USF's offices t
 Transportation, USF Police, two library desks, and the Card Center each own a slice of campus, with different contact
 channels and different hours.
 
-Bullhorn asks one question: *what happened?* Lost something, found something, or spotted a problem. Snap a photo
+Fix My Uni asks one question: *what happened?* Lost something, found something, or spotted a problem. Snap a photo
 and AI fills in the details, the app routes it to the office that owns it, and the student hears back: a live status
 page, a pop-up when their lost item turns up, and a staff console where USF closes the loop.
 

@@ -1,4 +1,4 @@
--- Bullhorn schema. Run in Supabase Dashboard -> SQL Editor (free tier). Safe to re-run.
+-- Fix My Uni schema. Run in Supabase Dashboard -> SQL Editor (free tier). Safe to re-run.
 --
 -- Security model: the browser never talks to these tables. Row Level Security is ON with NO policies for
 -- anon/authenticated, so the public anon key can read and write nothing. Every read and write goes through

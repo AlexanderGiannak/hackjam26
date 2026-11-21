@@ -12,7 +12,7 @@
   --color-tint: #f8f8f6;
   --color-gold: #cfc493;
   --color-gold-light: #f4f1e3;
-  /* gold from the Bullhorn logo */
+  /* gold from the Fix My Uni logo */
   --color-sun: #d4a541;
   --color-sun-dark: #c2932f;
   --color-bull-light: #e6f1ec;
@@ -63,7 +63,7 @@ body {
   @apply font-medium underline underline-offset-2;
 }
 
-/* ---- Bullhorn additions: map pin, loading shimmer, toasts ---- */
+/* ---- Fix My Uni additions: map pin, loading shimmer, toasts ---- */
 .bh-pin {
   width: 34px;
   height: 44px;

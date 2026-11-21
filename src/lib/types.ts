@@ -1,5 +1,5 @@
 /**
- * Bullhorn data model.
+ * Fix My Uni data model.
  *
  * One `Report` covers everything a student can snap on campus:
  * - `lost` / `found`: personal items, matched against each other.

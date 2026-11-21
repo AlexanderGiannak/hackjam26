@@ -1,7 +1,7 @@
 {
-  "name": "Bullhorn: report anything at USF",
-  "short_name": "Bullhorn",
-  "description": "Snap it, and Bullhorn sends it to the USF office that owns it.",
+  "name": "Fix My Uni: report anything at USF",
+  "short_name": "Fix My Uni",
+  "description": "Snap it, and Fix My Uni sends it to the USF office that owns it.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ede7d1",

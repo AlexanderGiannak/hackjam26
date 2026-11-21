@@ -1,7 +1,7 @@
 import { statusLabel, type Report, type Status } from "@/lib/types";
 import { CheckIcon } from "./Icons";
 
-const WHO = { reporter: "You / reporter", staff: "USF staff", system: "Bullhorn" };
+const WHO = { reporter: "You / reporter", staff: "USF staff", system: "Fix My Uni" };
 
 /** The report's trail, newest last: what happened, when, and who did it. */
 export function StatusTimeline({ report }: { report: Report }) {
