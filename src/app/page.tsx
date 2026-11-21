@@ -33,7 +33,7 @@ export default function Home() {
       <section className="max-w-3xl">
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">What happened?</h1>
         <p className="mt-3 text-lg text-muted sm:text-xl">
-          You don&apos;t need to know which office to ask. Pick one and we&apos;ll tell you where to go next.
+          You don&apos;t need to know which office to ask. Pick one and we&apos;ll tell you where to go next on the USF Tampa campus.
         </p>
       </section>
 
@@ -70,7 +70,7 @@ export default function Home() {
       </section>
 
       <section className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-[15px] text-muted">
-        <Link href="/contacts" className="link">Lost &amp; found phone numbers</Link>
+        <Link href="/contacts" className="link">Tampa lost &amp; found phone numbers</Link>
         <Link href="/issues" className="link">Campus issues</Link>
         <span>Emergency? Call 911.</span>
       </section>

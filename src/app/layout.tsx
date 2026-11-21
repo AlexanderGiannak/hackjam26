@@ -8,7 +8,7 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Campus Helper",
-  description: "Lost it, found it, or spotted something broken at USF? We already know which office to ask.",
+  description: "Lost it, found it, or spotted something broken on the USF Tampa campus? We already know which office to ask.",
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#ffffff" };

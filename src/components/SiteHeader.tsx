@@ -30,7 +30,7 @@ export function SiteHeader() {
             );
           })}
         </nav>
-        <Link href="/contacts" className="text-[15px] font-medium text-muted md:hidden">USF</Link>
+        <Link href="/contacts" className="text-[15px] font-medium text-muted md:hidden">USF Tampa</Link>
       </div>
     </header>
   );

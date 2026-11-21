@@ -2,7 +2,7 @@
 
 **Project name:** TBD (placeholder: `campus-helper`). Name ideas are parked until the team picks one.
 **One-line pitch:** You do not need to know which office to ask, because the app already does.
-**Audience:** USF students who lose things, find things, or spot something broken.
+**Audience:** USF Tampa campus students who lose things, find things, or spot something broken.
 **Source:** HackJam 2026 Project Brief, Idea 2 "Report Something".
 
 ---
@@ -183,4 +183,6 @@ Code: Next.js 15 app at repo root. See `README.md` for setup.
 
 The app also runs with zero config (browser-only demo mode) so the demo has a no-network fallback.
 
-**Update 2026-11-21 (V1 wireframes):** UI rebuilt to match `HackJam Wireframes V1.pdf`. Added item types (earbuds, tablet, jacket, textbook), issue types (restroom, AC, elevator), exact spot, up to 3 photos on lost reports, MSC Information Desk routing, Lost/Found browse tabs, and a `/contacts` directory for all three campuses. Supabase: re-run `supabase/schema.sql` (adds `spot`, `photo_urls`, new checks).
+**Update 2026-11-21 (V1 wireframes):** UI rebuilt to match `HackJam Wireframes V1.pdf`. Added item types (earbuds, tablet, jacket, textbook), issue types (restroom, AC, elevator), exact spot, up to 3 photos on lost reports, MSC Information Desk routing, Lost/Found browse tabs, and a `/contacts` directory. Supabase: re-run `supabase/schema.sql` (adds `spot`, `photo_urls`, new checks).
+
+**Scope decision 2026-11-21:** The app covers the **USF Tampa campus only** (largest campus). Buildings, offices, routing, and the contacts page are all Tampa.

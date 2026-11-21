@@ -2,7 +2,7 @@
 
 > You do not need to know which office to ask, because the app already does.
 
-Mobile-first web app for USF students who **lose** things, **find** things, or spot something **broken**.
+Mobile-first web app for **USF Tampa** students (Tampa campus only, the largest USF campus) who **lose** things, **find** things, or spot something **broken**.
 Full plan: [`hackjam.md`](./hackjam.md).
 
 ## Run it
@@ -24,7 +24,7 @@ Use "Reset demo" in the yellow banner to start over.
 | I found something | `/found` | Photo required, EXIF GPS -> nearest building, drop-off office, posts to found list, shows possible owners. IDs/cards are **not** posted (privacy flag) |
 | Report something broken | `/fix` | Issue type, routes by building kind (academic -> Facilities email, dorm -> Housing link, library -> library form), builds a `mailto:` draft with the photo URL |
 | Browse items | `/browse` | Lost / Found tabs, keyword search, type + building filters, "I found this" / "This is mine" links that prefill the other flow |
-| Contacts | `/contacts` | Sourced lost & found and help numbers for Tampa, St. Petersburg, and Sarasota-Manatee, plus official lost & found links |
+| Contacts | `/contacts` | Sourced USF Tampa lost & found and help numbers, plus official lost & found links |
 | Campus issues | `/issues` | Me-too counts, status (reported -> sent -> resolved), hotspots |
 | Photo AI (stretch) | `/api/analyze` | Gemini fills category, color, brand, description, ID flag. Key stays server-side. Results cached in the browser for demo safety |
 
@@ -39,7 +39,7 @@ checklist + email preview for broken reports. Tokens live in `src/app/globals.cs
 - `src/lib/routing.ts`: which office, in which order (lost checklist, found drop-off, fix-it channel)
 - `src/lib/matching.ts`: weighted score (category 40, color 25, building 20, time 15) + reason string
 - `src/lib/offices.ts`: office seed data with source URLs
-- `src/lib/campuses.ts`: per-campus contact directory with source URLs
+- `src/lib/contacts.ts`: Tampa contact directory with source URLs
 - `src/lib/buildings.ts`: building list with kind + approximate coordinates
 - `src/lib/store.ts`: data layer, Supabase when configured, localStorage otherwise
 - `src/lib/mail.ts`: Facilities email draft (goes to a teammate while testing)
