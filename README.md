@@ -27,7 +27,7 @@ a broken elevator in ENB, lost AirPods with a matching found post). The staff co
 `bulls`. Open two tabs to see a match alert arrive live. "Reset demo" in the yellow banner starts over.
 
 ```bash
-npm run check          # lint + typecheck + 51 tests + matching eval
+npm run check          # lint + typecheck + 55 tests + matching eval
 ```
 
 ## What it does
@@ -37,7 +37,7 @@ npm run check          # lint + typecheck + 51 tests + matching eval
 | **One flow for everything** | `/report`: photo, then Gemini decides *item or problem*, what it is, how urgent, and where the faces, plates and ID cards are. The student confirms instead of filling a form. No photo? "I lost something" works without one. |
 | **Map pins, not a building list** | The pin comes from the photo's GPS, the phone's location, or a tap. A pin within 70 m of a building is "in" it; anything else is outdoors, so potholes and parking lots work. |
 | **Routing you can explain** | `src/lib/routing.ts` decides the office from *what* and *where*: parking → Parking & Transportation, safety → USF Police (with a 911 button), roads → Facilities, indoor problems in a dorm → Housing, in a library → that library, everything else → Facilities. Deterministic and tested; AI never routes. |
-| **Duplicate detection** | Same problem type within 40 m? "3 reports of this already, 10 m away. Me too?" One vote per device. Votes rank the staff queue. |
+| **Duplicate detection** | Same problem type within 40 m? "3 reports of this already, 10 m away. Me too?" One vote per device; voting follows the report, so its updates reach your phone. Votes rank the staff queue, and staff can close a whole cluster in one update. |
 | **Lost ↔ found matching** | Scored on category, color family (navy = blue), place, time and shared distinctive words, with a reason the student can read: *"Same category, color, and building, around the same time; both mention "sticker", "dent"."* |
 | **Closing the loop** | Every report gets a live page (`/r/[id]`) with a status trail. "Mine" lists this phone's reports without an account. A watcher pops a notification when a match appears or staff update a status. |
 | **USF staff console** | `/ops`: open/urgent/median time-to-resolve KPIs, a per-office queue sorted by priority (urgent, then people affected, then age), "fix these first" clusters, and status updates with a note that reaches the student. |
@@ -76,7 +76,8 @@ flowchart LR
 | Found IDs and parking reports are never public, but still reach the right office | `tests/privacy.test.ts`, `tests/service.test.ts` |
 | A lost item's description (the owner's proof) is never shown to other students, and matched words are only revealed to the owner | `tests/service.test.ts` |
 | Students cannot change an issue's status; staff can, and every change is in the trail | `tests/service.test.ts` |
-| One "me too" per device | `tests/service.test.ts` |
+| One "me too" per device, and no vote lost when 20 arrive at once | `tests/service.test.ts` |
+| The AI route falls through Gemini models a key can't use, refuses cross-site calls and huge images, and rate-limits | `tests/analyze-route.test.ts` |
 | Bad input is refused by the server, not just the form (off-campus pins, missing type, 600-char text) | `tests/service.test.ts` |
 | AI output is never trusted blindly (unknown enums dropped, boxes clamped, visible card forces "ID") | `tests/misc.test.ts` |
 | Library hours that run past midnight; unknown hours say "not confirmed" instead of guessing | `tests/misc.test.ts` |
@@ -121,6 +122,7 @@ office checks the private description.
   through Asset Essentials). That integration is the obvious next step and needs USF's permission.
 - **The staff console uses one shared passcode**, not per-person accounts or roles. Fine for a demo, not for
   production (next: Supabase Auth with @usf.edu SSO and per-office roles).
+- **"One vote per device" trusts a device ID the browser sends.** Clearing storage gives a new one; the per-network limit (30 votes an hour) caps the damage, but it is not identity.
 - **Rate limits are in memory**, so on serverless they apply per warm instance. They stop a script during a demo;
   a real deployment needs a shared store (e.g. Upstash Redis).
 - **Gemini free tier:** Google may use free-tier inputs to improve its products. Redaction happens on the phone

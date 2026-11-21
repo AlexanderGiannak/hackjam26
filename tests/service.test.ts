@@ -147,3 +147,12 @@ describe("staff queue priority", () => {
     expect(order).toEqual([urgent, popular, old, done]);
   });
 });
+
+describe("me too under concurrency", () => {
+  it("never loses a vote when many arrive at once", async () => {
+    const repo = new MemoryRepo();
+    const { report } = await svc.createReport(repo, input({ type: "issue", issue_type: "lighting" }), null);
+    await Promise.all(Array.from({ length: 20 }, (_, i) => svc.meToo(repo, report.id, `dev-${i}`)));
+    expect((await repo.get(report.id))!.me_too_count).toBe(20);
+  });
+});

@@ -23,7 +23,7 @@ don't touch the same files, so merges stay boring. Swap names freely.
 
 ## Rules (from Relay, they work)
 - One branch per person (`lane1-…`), small commits, PR into `main`. Pull `main` every hour.
-- `npm run check` must pass before you push (lint, types, 51 tests, eval). CI runs it too.
+- `npm run check` must pass before you push (lint, types, 55 tests, eval). CI runs it too.
 - New behavior goes in a new file. Don't reformat files you aren't changing.
 - Business rules only in `src/lib/service.ts` / `routing.ts` / `privacy.ts`, each with a test. UI never decides who sees what.
 

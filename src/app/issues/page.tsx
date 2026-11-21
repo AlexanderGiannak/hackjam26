@@ -50,7 +50,7 @@ export default function IssuesPage() {
       <MapView
         className="h-72 w-full"
         zoom={15}
-        markers={shown.map((r) => ({
+        markers={shown.filter((r) => r.lat != null && r.lng != null).map((r) => ({
           id: r.id,
           lat: r.lat!,
           lng: r.lng!,

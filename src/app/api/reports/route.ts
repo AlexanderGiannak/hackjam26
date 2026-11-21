@@ -25,8 +25,14 @@ export async function POST(req: Request) {
   const tooMany = limited(createLimit, req, "create");
   if (tooMany) return tooMany;
   return handle(async (repo) => {
-    const form = await req.formData();
-    const raw = JSON.parse(String(form.get("report") ?? "{}"));
+    const form = await req.formData().catch(() => null);
+    if (!form) return json({ error: "Expected multipart form data" }, 400);
+    let raw: unknown;
+    try {
+      raw = JSON.parse(String(form.get("report") ?? "{}"));
+    } catch {
+      return json({ error: "Bad report JSON" }, 400);
+    }
     const input = parseNewReport(raw); // validate before touching storage
     const photo = form.get("photo");
     let photo_url: string | null = null;

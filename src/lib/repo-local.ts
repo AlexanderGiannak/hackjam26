@@ -53,6 +53,10 @@ export class LocalRepo extends MemoryRepo {
     this.load();
     return super.update(id, patch);
   }
+  async incrementMeToo(id: string) {
+    this.load();
+    return super.incrementMeToo(id);
+  }
   async vote(id: string, voter: string) {
     this.load();
     return super.vote(id, voter);

@@ -25,6 +25,12 @@ export class MemoryRepo implements Repo {
     this.rows = this.rows.map((r) => (r.id === id ? { ...r, ...patch } : r));
     this.save();
   }
+  async incrementMeToo(id: string) {
+    let n = 0;
+    this.rows = this.rows.map((r) => (r.id === id ? { ...r, me_too_count: (n = r.me_too_count + 1), updated_at: new Date().toISOString() } : r));
+    this.save();
+    return n;
+  }
   async vote(id: string, voter: string) {
     const k = `${id}:${voter}`;
     if (this.votes.has(k)) return false;

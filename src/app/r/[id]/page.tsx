@@ -8,7 +8,7 @@ import { markSeen } from "@/components/MatchWatcher";
 import { OfficeCard } from "@/components/OfficeCard";
 import { ReportCard, ReportThumb, timeAgo } from "@/components/ReportCard";
 import { StatusTimeline } from "@/components/StatusTimeline";
-import { getReport, matchesFor, meToo, setStatus } from "@/lib/client";
+import { following, getReport, matchesFor, meToo, setStatus } from "@/lib/client";
 import { placeLabel } from "@/lib/geo";
 import { buildIssueEmail } from "@/lib/mail";
 import type { Match } from "@/lib/matching";
@@ -43,7 +43,7 @@ function ReportPage() {
         const m = await matchesFor(id);
         setMatches(m);
         if (r.owner) markSeen(id, m.length, r.report.status);
-      } else if (r.owner) markSeen(id, 0, r.report.status);
+      } else if (r.owner || following().includes(id)) markSeen(id, 0, r.report.status);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -61,7 +61,9 @@ function ReportPage() {
 
   async function ownerMove(s: Status) {
     try {
-      setReport(await setStatus(report!.id, s));
+      const r = await setStatus(report!.id, s);
+      setReport(r);
+      markSeen(r.id, matches?.length ?? 0, r.status);
     } catch (e) {
       setError((e as Error).message);
     }

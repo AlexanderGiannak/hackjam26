@@ -20,6 +20,7 @@ export const DEMO_OPS_PASSCODE = "bulls";
 
 // ---------- this device's reports (owner tokens) ----------
 const MINE = "bullhorn.mine.v1";
+const FOLLOW = "bullhorn.follow.v1";
 const DEVICE = "bullhorn.device.v1";
 
 export interface MineEntry {
@@ -38,6 +39,20 @@ export function mine(): MineEntry[] {
 function remember(e: MineEntry) {
   try {
     localStorage.setItem(MINE, JSON.stringify([e, ...mine().filter((m) => m.id !== e.id)].slice(0, 50)));
+  } catch {}
+}
+/** Reports this device voted "me too" on: their status changes are shown here too. */
+export function following(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(FOLLOW) || "[]");
+  } catch {
+    return [];
+  }
+}
+export function follow(id: string) {
+  try {
+    if (tokenFor(id)) return;
+    localStorage.setItem(FOLLOW, JSON.stringify([id, ...following().filter((x) => x !== id)].slice(0, 10)));
   } catch {}
 }
 export function tokenFor(id: string): string | null {
@@ -117,8 +132,9 @@ export async function nearby(lat: number, lng: number, type: IssueType): Promise
 }
 
 export async function meToo(id: string): Promise<{ count: number; counted: boolean }> {
-  if (isLocalMode) return svc.meToo(repo(), id, deviceId());
-  return call(`/api/reports/${encodeURIComponent(id)}/me-too`, { method: "POST" });
+  const r = isLocalMode ? await svc.meToo(repo(), id, deviceId()) : await call<{ count: number; counted: boolean }>(`/api/reports/${encodeURIComponent(id)}/me-too`, { method: "POST" });
+  follow(id);
+  return r;
 }
 
 export async function setStatus(id: string, status: Status, note = "", ops?: string | null): Promise<Report> {
@@ -135,13 +151,27 @@ export async function setStatus(id: string, status: Status, note = "", ops?: str
   ).report;
 }
 
-export async function myReports(): Promise<svc.MyReport[]> {
+export type MyItem = svc.MyReport & { following?: boolean };
+
+/** This device's own reports (with match counts) plus the ones it follows after a "me too". */
+export async function myReports(): Promise<MyItem[]> {
   const entries = mine().map(({ id, token }) => ({ id, token }));
-  if (!entries.length) return [];
-  if (isLocalMode) return svc.myReports(repo(), entries);
-  return (
-    await call<{ mine: svc.MyReport[] }>("/api/me", { method: "POST", body: JSON.stringify({ entries }), headers: { "Content-Type": "application/json" } })
-  ).mine;
+  const own: MyItem[] = !entries.length
+    ? []
+    : isLocalMode
+      ? await svc.myReports(repo(), entries)
+      : (await call<{ mine: svc.MyReport[] }>("/api/me", { method: "POST", body: JSON.stringify({ entries }), headers: { "Content-Type": "application/json" } }))
+          .mine;
+  const followed = await Promise.all(
+    following()
+      .filter((id) => !entries.some((e) => e.id === id))
+      .map((id) =>
+        getReport(id)
+          .then((r): MyItem => ({ report: r.report, matches: 0, bestMatch: null, following: true }))
+          .catch(() => null),
+      ),
+  );
+  return [...own, ...followed.filter((x): x is MyItem => !!x)];
 }
 
 export async function opsReports(passcode: string): Promise<Report[]> {

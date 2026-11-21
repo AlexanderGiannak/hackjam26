@@ -12,13 +12,13 @@ Fallback if Wi-Fi dies: one laptop in demo mode with two tabs (the match alert w
 | 0:30 | Phone B | AI card appears: *Lighting out → Facilities*. Pin drops at Cooper Hall | "Gemini reads the photo; the pin comes from the phone. Routing is deterministic rules, not AI: in a dorm this would go to Housing, in a library to the library." |
 | 0:45 | Phone B | Amber card: *3 reports of this already, 10 m away*. Tap **Me too** | "Duplicate detection. Instead of a fourth email, this becomes one problem with ten students behind it." |
 | 1:00 | Laptop | `/ops`: the Cooper Hall cluster is at the top of *Fix these first* | "This is what USF sees: every report, ranked by urgency and by how many students it hits." |
-| 1:15 | Laptop | Set it to **Being fixed**, note "Electrician booked for 2pm", Update | – |
-| 1:20 | Phone B | Pop-up: *Lighting out: Being fixed* | "The loop closes. The student hears back." |
+| 1:15 | Laptop | Set it to **Being fixed**, note "Electrician booked for 2pm", keep "Also update the other reports" ticked, Update | – |
+| 1:20 | Phone B | Pop-up: *Lighting out: Being fixed · Electrician booked for 2pm* (Phone B follows it since it tapped Me too) | "The loop closes. The student hears back." |
 | 1:35 | Phone A | **I lost something** → Water bottle, black, Hydro Flask, "Bulls sticker and a dent", Marshall Center | "No photo needed. The description stays private: it's how the office checks it's really yours." |
 | 1:55 | Phone B | **Snap** the bottle → *I found this* → Post | "AI fills it in. It tells the finder exactly where to turn it in." |
 | 2:05 | Phone A | Pop-up: *Possible match! 🎉*, open it: the match score and the reason | "Within seconds, the owner knows. And it says why it matched." |
 | 2:20 | Phone B | Snap a car across a ramp (your own car) | "Parking goes privately to Parking & Transportation. Faces and plates are blurred on the phone, and parking reports are never public." |
-| 2:35 | Projector | README "Every claim has a test" table and the matching eval | "51 tests and a matching evaluation back every claim we just made. And here is what it doesn't do yet." (one line from Honest boundaries) |
+| 2:35 | Projector | README "Every claim has a test" table and the matching eval | "55 tests and a matching evaluation back every claim we just made. And here is what it doesn't do yet." (one line from Honest boundaries) |
 | 2:50 | – | – | "Bullhorn. See it, snap it, USF hears it." |
 
 **Judge questions to be ready for**

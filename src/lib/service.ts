@@ -20,6 +20,8 @@ export interface Repo {
   update(id: string, patch: Partial<StoredReport>): Promise<void>;
   /** Records one vote per voter per report. Returns false if this voter already voted. */
   vote(id: string, voter: string): Promise<boolean>;
+  /** Atomically adds one to me_too_count and returns the new count (no lost votes under concurrency). */
+  incrementMeToo(id: string): Promise<number>;
 }
 
 export class NotFoundError extends Error {
@@ -125,7 +127,11 @@ export async function listAllForStaff(repo: Repo): Promise<Report[]> {
  * to the owner of the lost report.
  */
 export async function matchesFor(repo: Repo, id: string, actor: Actor): Promise<Match[]> {
-  const all = await repo.list();
+  return matchesIn(await repo.list(), id, actor);
+}
+
+/** Same as matchesFor, over rows already loaded (so "My reports" lists the table once, not once per report). */
+function matchesIn(all: StoredReport[], id: string, actor: Actor): Match[] {
   const subject = all.find((r) => r.id === id);
   if (!subject) throw new NotFoundError("Report not found");
   if (subject.type === "issue") return [];
@@ -157,9 +163,7 @@ export async function meToo(repo: Repo, id: string, voter: string): Promise<{ co
   if (r.status === "resolved") throw new ValidationError("This one is already fixed.");
   const counted = await repo.vote(id, voter);
   if (!counted) return { count: r.me_too_count, counted };
-  const count = r.me_too_count + 1;
-  await repo.update(id, { me_too_count: count, updated_at: new Date().toISOString() });
-  return { count, counted };
+  return { count: await repo.incrementMeToo(id), counted };
 }
 
 /** What a reporter may do to their own report (staff may do anything). */
@@ -203,10 +207,11 @@ export interface MyReport {
 /** Everything the "My reports" page and the match alert need, for the reports this device created. */
 export async function myReports(repo: Repo, entries: { id: string; token: string }[]): Promise<MyReport[]> {
   const out: MyReport[] = [];
+  const all = await repo.list();
   for (const e of entries.slice(0, 50)) {
-    const r = await repo.get(e.id);
+    const r = all.find((x) => x.id === e.id);
     if (!r || !sameToken(e.token, r.owner_token)) continue;
-    const ms = r.type === "issue" || r.status === "resolved" ? [] : await matchesFor(repo, r.id, { kind: "owner", token: e.token });
+    const ms = r.type === "issue" || r.status === "resolved" ? [] : matchesIn(all, r.id, { kind: "owner", token: e.token });
     out.push({ report: withoutToken(r), matches: ms.length, bestMatch: ms[0] ?? null });
   }
   return out;

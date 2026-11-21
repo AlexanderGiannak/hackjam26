@@ -11,7 +11,12 @@ import { normalizeAnalysis } from "@/lib/analysis";
  */
 export const runtime = "nodejs";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+// Tried in order until one works for this key; the first that answers is remembered for this instance.
+// From the team's testing on 2026-11-21: 3.1-flash-lite answers in ~1 s, and the 2.5 models return 404 for new keys.
+const MODELS = [process.env.GEMINI_MODEL, "gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite"].filter(
+  (m, i, a): m is string => !!m && a.indexOf(m) === i,
+);
+let workingModel: string | null = null;
 const perClient = new RateLimiter(15, 10 * 60_000);
 const global = new RateLimiter(400, 24 * 60 * 60_000);
 
@@ -86,22 +91,34 @@ export async function POST(req: Request) {
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15_000);
+  const payload = JSON.stringify({
+    contents: [{ parts: [{ text: PROMPT }, { inline_data: { mime_type: "image/jpeg", data: body.image } }] }],
+    generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0.2 },
+  });
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      signal: controller.signal,
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: PROMPT }, { inline_data: { mime_type: "image/jpeg", data: body.image } }] }],
-        generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0.2 },
-      }),
-    });
-    if (!res.ok) return NextResponse.json({ error: `AI request failed (${res.status})` }, { status: 502 });
-    const out = await res.json();
-    const text: string | undefined = out?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return NextResponse.json({ error: "Empty AI response" }, { status: 502 });
-    // Never trust model output blindly: clamp enums, lengths and boxes before it reaches the form.
-    return NextResponse.json(normalizeAnalysis(JSON.parse(text)));
+    const order = workingModel ? [workingModel, ...MODELS.filter((m) => m !== workingModel)] : MODELS;
+    let lastStatus = 0;
+    for (const model of order) {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        signal: controller.signal,
+        body: payload,
+      });
+      if (res.status === 404 || res.status === 400) {
+        // model not available for this key (or rejects this schema): try the next one
+        lastStatus = res.status;
+        continue;
+      }
+      if (!res.ok) return NextResponse.json({ error: `AI request failed (${res.status})` }, { status: 502 });
+      workingModel = model;
+      const out = await res.json();
+      const text: string | undefined = out?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) return NextResponse.json({ error: "Empty AI response" }, { status: 502 });
+      // Never trust model output blindly: clamp enums, lengths and boxes before it reaches the form.
+      return NextResponse.json(normalizeAnalysis(JSON.parse(text)));
+    }
+    return NextResponse.json({ error: `No Gemini model available for this key (${lastStatus})` }, { status: 502 });
   } catch (e) {
     const aborted = (e as Error).name === "AbortError";
     return NextResponse.json({ error: aborted ? "AI timed out" : "AI error" }, { status: 504 });
