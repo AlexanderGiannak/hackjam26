@@ -18,7 +18,7 @@ describe("building keyword search", () => {
     expect(top("pool")).toBe("REC");
     expect(top("food")).toBe("MSC");
     expect(top("honors")).toBe("HON");
-    expect(top("nursing")).toBe("MDL");
+    expect(top("nursing")).toBe("MDC");
     expect(top("textbooks")).toBe("MSC");
     expect(codes("village")).toEqual(expect.arrayContaining(["BEA", "END", "HOR", "PIN", "SUM"]));
   });

@@ -35,8 +35,14 @@ Freely licensed; credit is required wherever the photos are shown or shared. Cro
 | ISA | [Interdisciplinary Sciences Building North University of South Florida 2024.jpg](https://commons.wikimedia.org/wiki/File:Interdisciplinary_Sciences_Building_North_University_of_South_Florida_2024.jpg) | Trevorrrrvalent | CC BY 4.0 |
 | CIS | [University of South Florida School of Information building.jpg](https://commons.wikimedia.org/wiki/File:University_of_South_Florida_School_of_Information_building.jpg) | Jescholz2 | CC BY-SA 4.0 |
 
-## Map snapshots
+## USF campus map photos
 
-No photo found yet for MDL, CPR, or SOC, so these are
-OpenStreetMap snapshots (zoom 18) with a pin on the building centroid. Map data © OpenStreetMap contributors (ODbL);
-the credit is printed on each image. Swap in a real photo by replacing the file with the same name.
+From USF's building footprints layer (gis.usf.edu, `Image_URL` field), downloaded 2026-11-21. They belong to USF.
+
+| Code | Source |
+|---|---|
+| CPR | https://cloud.usf.edu/MAPS/Photos/Building_Photos/CPR_0088.jpg (Russell M. Cooper Hall) |
+| SOC | https://cloud.usf.edu/MAPS/Photos/Building_Photos/SOC_0081.jpg (Social Science Building) |
+| MDC | https://cloud.usf.edu/MAPS/Photos/Building_Photos/MDC_0113.jpg (Morsani College of Medicine, which houses the Shimberg Library) |
+
+Shimberg's building code is MDC (USF lists the library at "MDC31"). MDL on the USF map is the Student Group Learning Building.
