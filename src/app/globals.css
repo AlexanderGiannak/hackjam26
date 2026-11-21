@@ -12,6 +12,9 @@
   --color-tint: #f8f8f6;
   --color-gold: #cfc493;
   --color-gold-light: #f4f1e3;
+  /* gold from the Bullhorn logo */
+  --color-sun: #d4a541;
+  --color-sun-dark: #c2932f;
   --color-bull-light: #e6f1ec;
   --font-sans: var(--font-inter);
 }

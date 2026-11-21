@@ -32,6 +32,20 @@ export default function Home() {
           </span>
         </Link>
 
+        <Link
+          href="/found"
+          className="flex items-center gap-5 rounded-3xl bg-sun p-5 text-ink shadow-sm transition hover:bg-sun-dark active:scale-[0.99] sm:p-6"
+        >
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/40">
+            <BoxIcon className="h-8 w-8" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-2xl font-bold">I found something</span>
+            <span className="mt-0.5 block text-ink/80">Snap it. We show you where to turn it in and find the owner.</span>
+          </span>
+          <ChevronRight className="h-6 w-6 shrink-0" />
+        </Link>
+
         <div className="grid grid-cols-2 gap-3">
           <Link href="/lost" className="rounded-3xl border border-line bg-white p-4 transition hover:border-ink/30 active:scale-[0.99] sm:p-5">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-canvas">
@@ -40,30 +54,16 @@ export default function Home() {
             <span className="mt-3 block text-lg font-bold">I lost something</span>
             <span className="mt-1 block text-sm text-muted">No photo needed. Get alerted on a match.</span>
           </Link>
-          <Link href="/found" className="rounded-3xl border border-line bg-white p-4 transition hover:border-ink/30 active:scale-[0.99] sm:p-5">
+          <Link href="/browse?type=found" className="rounded-3xl border border-line bg-white p-4 transition hover:border-ink/30 active:scale-[0.99] sm:p-5">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-canvas">
-              <BoxIcon className="h-5 w-5" />
+              <TrayIcon className="h-5 w-5" />
             </span>
-            <span className="mt-3 block text-lg font-bold">I found something</span>
-            <span className="mt-1 block text-sm text-muted">Snap it. We show you where to turn it in.</span>
-          </Link>
-        </div>
-
-        <Link
-          href="/browse?type=found"
-          className="flex items-center gap-4 rounded-3xl border border-line bg-white p-4 transition hover:border-ink/30 active:scale-[0.99]"
-        >
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-canvas">
-            <TrayIcon className="h-5 w-5" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-bold">Found items</span>
-            <span className="block text-sm text-muted">
+            <span className="mt-3 block text-lg font-bold">Found items</span>
+            <span className="mt-1 block text-sm text-muted">
               <FoundWaiting />
             </span>
-          </span>
-          <ChevronRight className="h-5 w-5 shrink-0 text-muted" />
-        </Link>
+          </Link>
+        </div>
 
         <p className="hidden pt-2 text-sm text-muted lg:block">
           Need a phone number?{" "}
