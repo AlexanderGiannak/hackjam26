@@ -2,101 +2,104 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { MapView, TYPE_COLORS } from "@/components/MapView";
 import { ReportCard } from "@/components/ReportCard";
-import { listReports, meToo, setStatus } from "@/lib/store";
-import type { BrokenStatus, Report } from "@/lib/types";
+import { listReports, meToo } from "@/lib/client";
+import { clusterIssues } from "@/lib/duplicates";
+import { ISSUE_ICONS, ISSUE_LABELS, reportTitle, type Report } from "@/lib/types";
 
-const STATUSES: BrokenStatus[] = ["reported", "sent", "resolved"];
-const ME_TOO_KEY = "campus-helper.me-too.v1";
-
-function readVoted(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(ME_TOO_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
+const VOTED = "bullhorn.voted.v1";
 
 export default function IssuesPage() {
   const [rows, setRows] = useState<Report[] | null>(null);
-  const [voted, setVoted] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [voted, setVoted] = useState<string[]>([]);
+  const [showFixed, setShowFixed] = useState(false);
 
   useEffect(() => {
-    setVoted(readVoted());
-    listReports("broken").then(setRows).catch((e) => setError(e.message));
+    try {
+      setVoted(JSON.parse(localStorage.getItem(VOTED) || "[]"));
+    } catch {}
+    listReports("issue").then(setRows).catch((e) => setError(e.message));
   }, []);
 
-  const hotspots = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of rows ?? []) {
-      if (r.status === "resolved" || !r.building) continue;
-      m.set(r.building, (m.get(r.building) ?? 0) + 1 + (r.me_too_count ?? 0));
-    }
-    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }, [rows]);
+  const open = useMemo(() => (rows ?? []).filter((r) => r.status !== "resolved"), [rows]);
+  const shown = showFixed ? (rows ?? []) : open;
+  const clusters = useMemo(() => clusterIssues(open).filter((c) => c.people > 1).slice(0, 4), [open]);
 
-  async function onMeToo(id: string) {
+  async function vote(id: string) {
     if (voted.includes(id)) return;
-    const n = await meToo(id);
-    setRows((rs) => rs?.map((r) => (r.id === id ? { ...r, me_too_count: n } : r)) ?? null);
+    try {
+      const { count } = await meToo(id);
+      setRows((rs) => rs?.map((r) => (r.id === id ? { ...r, me_too_count: count } : r)) ?? null);
+    } catch {}
     const v = [...voted, id];
     setVoted(v);
     try {
-      localStorage.setItem(ME_TOO_KEY, JSON.stringify(v));
+      localStorage.setItem(VOTED, JSON.stringify(v));
     } catch {}
-  }
-
-  async function onStatus(id: string, s: BrokenStatus) {
-    await setStatus(id, s);
-    setRows((rs) => rs?.map((r) => (r.id === id ? { ...r, status: s } : r)) ?? null);
   }
 
   return (
     <div className="space-y-5">
       <div className="flex items-end justify-between">
-        <h1 className="text-2xl font-bold">Campus issues</h1>
-        <Link href="/fix" className="text-sm font-medium text-bull underline">Report one</Link>
+        <h1 className="text-2xl font-bold">Campus right now</h1>
+        <Link href="/report?intent=issue" className="text-sm font-medium text-bull underline">Report one</Link>
       </div>
 
-      {hotspots.length > 0 && (
+      <MapView
+        className="h-72 w-full"
+        zoom={15}
+        markers={shown.map((r) => ({
+          id: r.id,
+          lat: r.lat!,
+          lng: r.lng!,
+          color: r.status === "resolved" ? TYPE_COLORS.resolved : r.severity === "urgent" ? TYPE_COLORS.urgent : TYPE_COLORS.issue,
+          size: 6 + Math.min(8, r.me_too_count),
+          label: `${reportTitle(r)} · ${1 + r.me_too_count} affected`,
+          onClick: () => (location.href = `/r/${r.id}`),
+        }))}
+      />
+      <p className="-mt-3 text-xs text-neutral-500">Bigger dot = more students affected. Parking reports are private and not shown.</p>
+
+      {clusters.length > 0 && (
         <section className="card">
-          <h2 className="mb-2 font-semibold">Hotspots</h2>
-          <ul className="space-y-1.5 text-sm">
-            {hotspots.map(([b, n]) => (
-              <li key={b} className="flex items-center gap-2">
-                <span className="flex-1">{b}</span>
-                <span className="h-2 rounded-full bg-bull" style={{ width: `${Math.min(100, n * 12)}px` }} />
-                <span className="w-6 text-right tabular-nums text-neutral-600">{n}</span>
+          <h2 className="mb-2 font-semibold">Hit the most people</h2>
+          <ul className="space-y-2 text-sm">
+            {clusters.map((c) => (
+              <li key={c.reports[0].id}>
+                <Link href={`/r/${c.reports[0].id}`} className="flex items-center gap-2">
+                  <span className="text-lg">{ISSUE_ICONS[c.issue_type]}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {ISSUE_LABELS[c.issue_type]} · {c.reports[0].building ?? "outdoors"}
+                  </span>
+                  <span className="h-2 rounded-full bg-bull" style={{ width: `${Math.min(90, c.people * 8)}px` }} />
+                  <span className="w-6 text-right tabular-nums text-neutral-600">{c.people}</span>
+                </Link>
               </li>
             ))}
           </ul>
         </section>
       )}
 
+      <label className="flex items-center gap-2 text-sm text-neutral-600">
+        <input type="checkbox" checked={showFixed} onChange={(e) => setShowFixed(e.target.checked)} className="accent-bull" /> Show fixed ones too
+      </label>
+
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-      {!rows && !error && <p className="text-neutral-500">Loading...</p>}
+      {!rows && !error && <div className="shimmer h-24 rounded-2xl" />}
       <div className="space-y-3">
-        {rows?.map((r) => (
+        {shown.map((r) => (
           <ReportCard key={r.id} report={r}>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="mt-2 flex items-center gap-2">
               <button
-                onClick={() => onMeToo(r.id)}
-                disabled={voted.includes(r.id)}
+                onClick={() => vote(r.id)}
+                disabled={voted.includes(r.id) || r.status === "resolved"}
                 className="rounded-full border border-neutral-300 px-3 py-1 text-xs font-medium disabled:bg-gold-light"
               >
-                👍 Me too · {r.me_too_count ?? 0}
+                👍 Me too · {1 + r.me_too_count}
               </button>
-              <select
-                value={r.status}
-                onChange={(e) => onStatus(r.id, e.target.value as BrokenStatus)}
-                className="rounded-full border border-neutral-300 bg-white px-2 py-1 text-xs"
-                aria-label="Status"
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+              <Link href={`/r/${r.id}`} className="text-xs font-medium text-bull underline">Details</Link>
             </div>
           </ReportCard>
         ))}

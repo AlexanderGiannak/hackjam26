@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ReportCard } from "@/components/ReportCard";
-import { listReports } from "@/lib/store";
-import { BUILDINGS } from "@/lib/buildings";
-import { CATEGORIES, CATEGORY_LABELS, type Report } from "@/lib/types";
+import { BUILDINGS, canonicalBuildingName } from "@/lib/buildings";
+import { listReports } from "@/lib/client";
+import { CATEGORY_LABELS, ITEM_CATEGORIES, type Report } from "@/lib/types";
 
 export default function BrowsePage() {
   const [rows, setRows] = useState<Report[] | null>(null);
@@ -16,7 +16,7 @@ export default function BrowsePage() {
 
   useEffect(() => {
     listReports("found")
-      .then((r) => setRows(r.filter((x) => x.status !== "closed")))
+      .then((r) => setRows(r.filter((x) => x.status !== "resolved")))
       .catch((e) => setError(e.message));
   }, []);
 
@@ -25,8 +25,8 @@ export default function BrowsePage() {
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
     return rows.filter((r) => {
       if (cat && r.category !== cat) return false;
-      if (bld && r.building !== bld) return false;
-      const hay = [r.description, r.color, r.brand, r.building, r.category && CATEGORY_LABELS[r.category]].join(" ").toLowerCase();
+      if (bld && canonicalBuildingName(r.building) !== bld) return false;
+      const hay = [r.description, r.color, r.brand, r.building, ...r.tags, r.category && CATEGORY_LABELS[r.category]].join(" ").toLowerCase();
       return terms.every((t) => hay.includes(t));
     });
   }, [rows, q, cat, bld]);
@@ -34,14 +34,14 @@ export default function BrowsePage() {
   return (
     <div className="space-y-4">
       <div className="flex items-end justify-between">
-        <h1 className="text-2xl font-bold">Found items</h1>
-        <Link href="/found" className="text-sm font-medium text-bull underline">Post a found item</Link>
+        <h1 className="text-2xl font-bold">Found on campus</h1>
+        <Link href="/report?intent=found" className="text-sm font-medium text-bull underline">Post a found item</Link>
       </div>
-      <input className="field" placeholder="Search: black iphone, keys, hydro flask..." value={q} onChange={(e) => setQ(e.target.value)} />
+      <input className="field" placeholder="Search: black iphone, keys, hydro flask…" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="grid grid-cols-2 gap-3">
         <select className="field" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
           <option value="">All categories</option>
-          {CATEGORIES.filter((c) => c !== "id_card").map((c) => (
+          {ITEM_CATEGORIES.filter((c) => c !== "id_card").map((c) => (
             <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
           ))}
         </select>
@@ -53,15 +53,16 @@ export default function BrowsePage() {
         </select>
       </div>
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-      {!rows && !error && <p className="text-neutral-500">Loading...</p>}
+      {!rows && !error && <div className="shimmer h-24 rounded-2xl" />}
       {rows && filtered.length === 0 && <p className="card text-sm text-neutral-600">Nothing matches. Try fewer words.</p>}
       <div className="space-y-3">
         {filtered.map((r) => (
-          <ReportCard key={r.id} report={r} />
+          <ReportCard key={r.id} report={r} href={`/r/${r.id}`} />
         ))}
       </div>
       <p className="text-center text-xs text-neutral-500">
-        Think one is yours? <Link href="/lost" className="underline">Report it lost</Link> to see which office has it.
+        Think one is yours? <Link href="/report?intent=lost" className="underline">Report it lost</Link>: you&apos;ll see the match and which office has it.
+        IDs and cards are never listed here.
       </p>
     </div>
   );
