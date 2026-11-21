@@ -3,6 +3,7 @@
 @theme inline {
   --color-bull: #006747;
   --color-bull-dark: #004d35;
+  --color-bull-light: #e6f2ed;
   --color-gold: #cfc493;
   --color-gold-light: #f4f1e3;
   --font-sans: var(--font-geist-sans);
@@ -16,6 +17,7 @@ body {
   background: #f7f7f4;
   color: #1c1c1c;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @utility field {
@@ -35,4 +37,71 @@ body {
 }
 @utility card {
   @apply rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm;
+}
+@utility chip {
+  @apply rounded-full border px-3 py-1.5 text-sm font-medium transition;
+}
+
+/* draggable map pin */
+.bh-pin {
+  width: 34px;
+  height: 44px;
+  position: relative;
+  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.35));
+}
+.bh-pin::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 0;
+  background: #006747;
+  transform: rotate(-45deg);
+  transform-origin: center;
+  top: 4px;
+}
+.bh-pin > div {
+  position: absolute;
+  left: 12px;
+  top: 13px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #cfc493;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+.shimmer {
+  background: linear-gradient(90deg, #eee 25%, #f7f7f4 50%, #eee 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.2s infinite linear;
+}
+
+@keyframes pop-in {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.pop-in {
+  animation: pop-in 0.25s ease-out;
+}
+
+.leaflet-container {
+  border-radius: 1rem;
+  font-family: inherit;
+  z-index: 0;
 }

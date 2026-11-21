@@ -31,13 +31,16 @@ export const BUILDINGS: Building[] = [
   // TODO(team): The Village is not mapped in OpenStreetMap; confirm this pin on the USF campus map.
   { code: "VIL", name: "The Village", kind: "dorm", lat: 28.0681, lng: -82.419 },
   { code: "HOL", name: "Holly Apartments", kind: "dorm", lat: 28.0657, lng: -82.4104 },
-  { code: "AND", name: "Castor / Andros Complex", kind: "dorm", lat: 28.0639, lng: -82.4111 },
+  // Andros was demolished in 2017 for The Village; Betty Castor and Beta Halls are in the Argos Center.
+  { code: "ARG", name: "Argos Center (Castor & Beta Halls)", kind: "dorm", lat: 28.0639, lng: -82.4111 },
 ];
 
 /** Old building names/codes that reports may still be saved under, mapped to the current name. */
 const RENAMED: Record<string, string> = {
   "Communication & Media Studies": "Communication and Information Sciences",
   CMC: "Communication and Information Sciences",
+  "Castor / Andros Complex": "Argos Center (Castor & Beta Halls)",
+  AND: "Argos Center (Castor & Beta Halls)",
 };
 
 /** Current building name for a stored value, so old reports still filter, match, and route. */
@@ -65,7 +68,7 @@ export function nearestBuilding(lat: number, lng: number, maxMeters = 400): Buil
   return bestD <= maxMeters ? best : undefined;
 }
 
-function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
+export function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371000;
   const toRad = (x: number) => (x * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
