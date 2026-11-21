@@ -53,7 +53,7 @@ export function ReportCard({
             {statusLabel(report.type, report.status)} · {timeAgo(report.created_at)}
           </span>
         </div>
-        <h3 className="mt-1 font-semibold capitalize">{reportTitle(report)}</h3>
+        <h3 className="mt-1 font-semibold">{reportTitle(report)}</h3>
         <p className="truncate text-sm text-neutral-600">{placeLabel(report)}</p>
         {report.description && <p className="mt-1 line-clamp-2 text-sm text-neutral-700">{report.description}</p>}
         {reason && (

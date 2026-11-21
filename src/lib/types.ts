@@ -232,6 +232,9 @@ export function itemTitle(r: { color: string | null; category: Category | null; 
   if (!r.category) return "";
   const named = r.category === "other" && r.item_name?.trim();
   const label = named ? named.toLowerCase() : CATEGORY_LABELS[r.category].toLowerCase().replace("airpods / earbuds", "earbuds");
-  const t = [r.color, r.brand, label].filter(Boolean).join(" ");
+  // "Black iPhone", not "Black iPhone phone": skip the type when the brand already says it (words of 3+ letters,
+  // so a brand like "Adidas" never swallows "id card").
+  const brandSaysIt = !!r.brand && label.split(/\s+/).some((w) => w.length >= 3 && r.brand!.toLowerCase().includes(w));
+  const t = [r.color, r.brand, brandSaysIt ? null : label].filter(Boolean).join(" ");
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
