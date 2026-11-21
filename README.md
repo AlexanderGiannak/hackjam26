@@ -7,12 +7,17 @@ these every day and say nothing, because nobody knows *which* of USF's offices t
 Transportation, USF Police, two library desks, and the Card Center each own a slice of campus, with different contact
 channels and different hours.
 
-Bullhorn is one camera button. AI reads the photo, the app routes it to the office that owns it, and the student
-hears back: a live status page, a pop-up when their lost item turns up, and a staff console where USF closes the loop.
+Bullhorn asks one question: *what happened?* Lost something, found something, or spotted a problem. Snap a photo
+and AI fills in the details, the app routes it to the office that owns it, and the student hears back: a live status
+page, a pop-up when their lost item turns up, and a staff console where USF closes the loop.
 
-| Snap | Already reported? | Your item turned up | USF staff console |
+**Live demo:** _add the Vercel URL here_ · **Design:** `HackJam Wireframes V1.pdf` · **Deploy:** [`docs/DEPLOY.md`](docs/DEPLOY.md)
+
+| What happened? | Already reported? | Your item turned up | Who has it, in order |
 |---|---|---|---|
-| ![home](docs/screens/home.png) | ![duplicate](docs/screens/duplicate.png) | ![alert](docs/screens/alert.png) | ![ops](docs/screens/ops.png) |
+| ![home](docs/screens/home.png) | ![duplicate](docs/screens/duplicate.png) | ![alert](docs/screens/alert.png) | ![match](docs/screens/match.png) |
+
+![USF staff console](docs/screens/ops.png)
 
 ## Run it (zero setup)
 
@@ -22,20 +27,20 @@ npm run dev            # http://localhost:3000
 ```
 
 With no environment variables it runs in **demo mode**: the same rules run in the browser against localStorage,
-seeded with a believable week on campus (29 reports: a cluster of dead lights at Cooper Hall, potholes on Holly Drive,
-a broken elevator in ENB, lost AirPods with a matching found post). The staff console passcode in demo mode is
+seeded with a believable week on campus (31 reports: a cluster of dead lights at Cooper Hall, potholes by the Rec
+Center, a broken elevator in ENB, lost AirPods with a matching found post). The staff console passcode in demo mode is
 `bulls`. Open two tabs to see a match alert arrive live. "Reset demo" in the yellow banner starts over.
 
 ```bash
-npm run check          # lint + typecheck + 55 tests + matching eval
+npm run check          # lint + typecheck + 59 tests + matching eval
 ```
 
 ## What it does
 
 | | |
 |---|---|
-| **One flow for everything** | `/report`: photo, then Gemini decides *item or problem*, what it is, how urgent, and where the faces, plates and ID cards are. The student confirms instead of filling a form. No photo? "I lost something" works without one. |
-| **Map pins, not a building list** | The pin comes from the photo's GPS, the phone's location, or a tap. A pin within 70 m of a building is "in" it; anything else is outdoors, so potholes and parking lots work. |
+| **Three flows, one question** | *I lost something*, *I found something*, *Report a problem* (from the V1 wireframes). Each is two steps with a live preview of the post or email. A photo auto-fills the form: Gemini picks the type, color, brand, urgency, and finds the faces, plates and ID cards to blur; with no AI key, an on-device color guess still helps. Every auto-filled field is tagged and can be undone. |
+| **Anywhere on campus** | Pick one of 24 buildings (libraries, academic buildings, residence halls), or tap the map for outdoor problems. The pin comes from the photo's GPS, the phone's location, or a tap; a pin within 70 m of a building is "in" it, so potholes and parking lots work. |
 | **Routing you can explain** | `src/lib/routing.ts` decides the office from *what* and *where*: parking → Parking & Transportation, safety → USF Police (with a 911 button), roads → Facilities, indoor problems in a dorm → Housing, in a library → that library, everything else → Facilities. Deterministic and tested; AI never routes. |
 | **Duplicate detection** | Same problem type within 40 m? "3 reports of this already, 10 m away. Me too?" One vote per device; voting follows the report, so its updates reach your phone. Votes rank the staff queue, and staff can close a whole cluster in one update. |
 | **Lost ↔ found matching** | Scored on category, color family (navy = blue), place, time and shared distinctive words, with a reason the student can read: *"Same category, color, and building, around the same time; both mention "sticker", "dent"."* |
@@ -49,7 +54,7 @@ npm run check          # lint + typecheck + 55 tests + matching eval
 flowchart LR
   subgraph Phone
     A[Camera + EXIF GPS] --> B[resize + pixelate faces/plates<br/>EXIF stripped]
-    B --> C[/report UI/]
+    B --> C[Lost / Found / Problem flows]
   end
   C -- photo --> G[/api/analyze<br/>Gemini triage, rate-limited/]
   C -- report + blurred JPEG --> R[/api/reports/]
@@ -60,7 +65,8 @@ flowchart LR
   W[MatchWatcher, every 5 s] -- owner tokens --> S
 ```
 
-- **Next.js 15 (App Router) + TypeScript + Tailwind 4**, Leaflet + OpenStreetMap tiles, Zod, Vitest.
+- **Next.js 15 (App Router) + TypeScript + Tailwind 4**, Leaflet + OpenStreetMap tiles, Zod, Vitest. UI follows the
+  team's V1 wireframes.
 - **One rules layer, two backends.** `src/lib/service.ts` holds every business rule. On a server, API routes run it
   against Supabase with the service-role key; in demo mode the browser runs the *same functions* against
   localStorage. The demo is not a mock: it is the product with a different `Repo`.
@@ -79,9 +85,17 @@ flowchart LR
 | One "me too" per device, and no vote lost when 20 arrive at once | `tests/service.test.ts` |
 | The AI route falls through Gemini models a key can't use, refuses cross-site calls and huge images, and rate-limits | `tests/analyze-route.test.ts` |
 | Bad input is refused by the server, not just the form (off-campus pins, missing type, 600-char text) | `tests/service.test.ts` |
+| ...and by the database itself (public parking rows, off-campus pins, items without a type, oversized text) | `supabase/schema.sql` constraints, checked on Postgres 16 |
+| The building a student picks wins over the photo's GPS; GPS from off campus is ignored | `tests/service.test.ts` |
 | AI output is never trusted blindly (unknown enums dropped, boxes clamped, visible card forces "ID") | `tests/misc.test.ts` |
 | Library hours that run past midnight; unknown hours say "not confirmed" instead of guessing | `tests/misc.test.ts` |
 | Duplicates within 40 m, clusters ranked by people affected, queue order urgent > popular > old | `tests/duplicates.test.ts`, `tests/service.test.ts` |
+
+### AI on real photos, measured
+
+`npm run eval:photos` sends your team's labeled campus photos through `/api/analyze` exactly as the app does and
+writes a table: item vs. problem, exact type, right office, faces and plates found, false blurs, response time
+(see [`docs/PHOTO-EVAL.md`](docs/PHOTO-EVAL.md)). **Results: _run it on 30-50 real photos and paste the table here._**
 
 ### Matching, measured
 
@@ -130,19 +144,15 @@ office checks the private description.
   terms USF approves.
 - **AI can miss a face or plate.** Parking reports are private regardless, and staff see the photo before acting.
 - **Office data is hand-checked** against usf.edu pages on 2026-11-21 (source URL above each entry in
-  `src/lib/offices.ts`). Parking hours and USF Police property-pickup hours are not published there, so the app
-  shows "not confirmed" rather than guessing. The Village pin is unconfirmed.
+  `src/lib/offices.ts`). Parking, MSC desk and USF Police property-pickup hours are not published there, so the
+  app shows "not confirmed" rather than guessing.
 - **Live alerts poll every 5 seconds** while the app is open. Push notifications when the app is closed (Web Push)
   are not built yet.
 
 ## Deploy (free tiers, no card)
 
-1. **Supabase**: new project → SQL Editor → paste `supabase/schema.sql` → Run. Optionally load the demo week:
-   `npm run seed:sql > seed.sql` and run that too.
-2. **Vercel**: import the repo, set `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPS_PASSCODE`,
-   `GEMINI_API_KEY`, `NEXT_PUBLIC_TEST_EMAIL` (see `.env.example`). Deploy.
-3. Before the demo: open the Supabase project (free projects pause), run each demo photo through once so the AI
-   result is cached on the demo phone, and follow [`docs/DEMO.md`](docs/DEMO.md).
+Step by step in [`docs/DEPLOY.md`](docs/DEPLOY.md): Supabase (run `supabase/schema.sql`), Vercel (import the repo,
+five environment variables), then a two-minute smoke test.
 
 ## Code map
 
@@ -157,6 +167,9 @@ office checks the private description.
 | `src/lib/photo.ts` | Resize, EXIF strip, pixelation |
 | `src/lib/client.ts` | The one API the UI calls (demo mode or server) |
 | `src/lib/offices.ts`, `src/lib/buildings.ts` | Hand-verified USF data with sources |
-| `src/app/report`, `src/app/r/[id]`, `src/app/ops` | Report flow, live report page, staff console |
+| `src/components/ItemFlow.tsx`, `FixFlow.tsx`, `fields.tsx` | Lost/found and problem flows (V1 design) |
+| `src/lib/autofill.ts` | Photo auto-fill: Gemini, with an on-device color fallback |
+| `src/app/r/[id]`, `src/app/me`, `src/app/ops` | Live report page, My reports, staff console |
 | `supabase/schema.sql` | Tables, constraints, locked-down RLS, buckets |
-| `docs/DEMO.md`, `docs/TEAM.md` | 3-minute demo script, who does what |
+| `scripts/eval-photos.ts` | Real-photo AI evaluation |
+| `docs/DEMO.md`, `docs/TEAM.md`, `docs/DEPLOY.md` | 3-minute demo script, who does what, deployment |
