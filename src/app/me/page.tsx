@@ -17,9 +17,10 @@ export default function MinePage() {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-2xl space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">My reports</h1>
+        <Link href="/" className="link text-[15px]">← Back to home</Link>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">My reports</h1>
         <p className="text-sm text-neutral-600">Saved on this phone, plus issues you said “me too” to. No account needed.</p>
       </div>
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
@@ -27,7 +28,7 @@ export default function MinePage() {
       {rows?.length === 0 && (
         <div className="card text-center">
           <p className="text-neutral-600">Nothing yet.</p>
-          <Link href="/report" className="btn-primary mt-3">📷 Report something</Link>
+          <Link href="/" className="btn-primary mt-3">Report something</Link>
         </div>
       )}
       <div className="space-y-3">

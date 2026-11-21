@@ -96,16 +96,17 @@ function actor(id?: string, ops?: string | null): svc.Actor {
 }
 
 // ---------- API ----------
-export async function createReport(input: NewReport, photo: Blob | null): Promise<Report> {
+/** `photos` must already be resized and redacted (see photo.ts). */
+export async function createReport(input: NewReport, photos: Blob[] = []): Promise<Report> {
   if (isLocalMode) {
-    const url = photo ? await blobToDataUrl(photo) : null;
-    const { report, token } = await svc.createReport(repo(), input, url);
+    const urls = await Promise.all(photos.map(blobToDataUrl));
+    const { report, token } = await svc.createReport(repo(), input, urls);
     remember({ id: report.id, token, created_at: report.created_at });
     return report;
   }
   const form = new FormData();
   form.set("report", JSON.stringify(input));
-  if (photo) form.set("photo", photo, "photo.jpg");
+  photos.forEach((p, i) => form.append("photo", p, `photo-${i + 1}.jpg`));
   const { report, token } = await call<{ report: Report; token: string }>("/api/reports", { method: "POST", body: form });
   remember({ id: report.id, token, created_at: report.created_at });
   return report;

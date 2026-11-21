@@ -7,40 +7,45 @@
  */
 export type ReportType = "lost" | "found" | "issue";
 
-export const ITEM_CATEGORIES = ["phone", "wallet", "laptop", "id_card", "bottle", "keys", "bag", "headphones", "clothing", "other"] as const;
+export const ITEM_CATEGORIES = ["phone", "earbuds", "laptop", "tablet", "wallet", "keys", "id_card", "bottle", "bag", "jacket", "textbook", "other"] as const;
 export type Category = (typeof ITEM_CATEGORIES)[number];
 /** Kept for older imports. */
 export const CATEGORIES = ITEM_CATEGORIES;
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   phone: "Phone",
-  wallet: "Wallet",
+  earbuds: "AirPods / earbuds",
   laptop: "Laptop",
-  id_card: "ID / card",
-  bottle: "Water bottle",
+  tablet: "Tablet",
+  wallet: "Wallet",
   keys: "Keys",
-  bag: "Bag / backpack",
-  headphones: "Headphones",
-  clothing: "Clothing",
+  id_card: "ID card",
+  bottle: "Water bottle",
+  bag: "Bag",
+  jacket: "Jacket",
+  textbook: "Textbook",
   other: "Other",
 };
 
 export const CATEGORY_ICONS: Record<Category, string> = {
   phone: "📱",
-  wallet: "👛",
+  earbuds: "🎧",
   laptop: "💻",
+  tablet: "📲",
+  wallet: "👛",
+  keys: "🔑",
   id_card: "🪪",
   bottle: "🧴",
-  keys: "🔑",
   bag: "🎒",
-  headphones: "🎧",
-  clothing: "🧥",
+  jacket: "🧥",
+  textbook: "📚",
   other: "📦",
 };
 
 export const ISSUE_TYPES = [
   "lighting",
   "water",
+  "ac",
   "door",
   "elevator",
   "furniture",
@@ -56,6 +61,7 @@ export type IssueType = (typeof ISSUE_TYPES)[number];
 export const ISSUE_LABELS: Record<IssueType, string> = {
   lighting: "Lighting out",
   water: "Leak / fountain",
+  ac: "AC / temperature",
   door: "Door or lock",
   elevator: "Elevator / ramp (accessibility)",
   furniture: "Broken furniture",
@@ -70,6 +76,7 @@ export const ISSUE_LABELS: Record<IssueType, string> = {
 export const ISSUE_ICONS: Record<IssueType, string> = {
   lighting: "💡",
   water: "🚰",
+  ac: "🌡️",
   door: "🚪",
   elevator: "♿",
   furniture: "🪑",
@@ -81,22 +88,27 @@ export const ISSUE_ICONS: Record<IssueType, string> = {
   other: "🛠️",
 };
 
-export const COLORS = [
-  "black",
-  "white",
-  "gray",
-  "silver",
-  "blue",
-  "red",
-  "green",
-  "yellow",
-  "orange",
-  "pink",
-  "purple",
-  "brown",
-  "gold",
-  "multicolor",
+/** Swatches shown in the color picker (order matches the V1 wireframes). */
+export const COLOR_SWATCHES = [
+  { name: "black", hex: "#1c1c1c" },
+  { name: "white", hex: "#ffffff" },
+  { name: "gray", hex: "#8a8a8a" },
+  { name: "silver", hex: "#c8cbd0" },
+  { name: "red", hex: "#d23c3c" },
+  { name: "orange", hex: "#e8862a" },
+  { name: "yellow", hex: "#f2c94c" },
+  { name: "green", hex: "#2f9e5a" },
+  { name: "blue", hex: "#2f6fde" },
+  { name: "purple", hex: "#7b4fd6" },
+  { name: "pink", hex: "#e87fb3" },
+  { name: "brown", hex: "#8a5a2e" },
 ] as const;
+export const COLORS = COLOR_SWATCHES.map((c) => c.name);
+
+export function colorHex(name: string | null | undefined): string | null {
+  if (!name) return null;
+  return COLOR_SWATCHES.find((c) => c.name === name.toLowerCase())?.hex ?? null;
+}
 
 export const SEVERITIES = ["low", "normal", "urgent"] as const;
 export type Severity = (typeof SEVERITIES)[number];
@@ -126,8 +138,13 @@ export interface StoredReport {
   brand: string | null;
   description: string;
   tags: string[];
+  /** first photo */
   photo_url: string | null;
+  /** all photos (up to 3 for lost reports: the item, or proof like a Find My screenshot) */
+  photo_urls: string[];
   building: string | null;
+  /** exact spot, e.g. "2nd floor, by the elevators" */
+  spot: string | null;
   lat: number | null;
   lng: number | null;
   issue_type: IssueType | null;
@@ -155,6 +172,7 @@ export interface NewReport {
   description: string;
   tags: string[];
   building: string | null;
+  spot: string | null;
   lat: number | null;
   lng: number | null;
   issue_type: IssueType | null;
@@ -197,10 +215,17 @@ export function statusLabel(type: ReportType, s: Status): string {
 
 export function reportTitle(r: Pick<Report, "type" | "issue_type" | "color" | "brand" | "category">): string {
   if (r.type === "issue") return ISSUE_LABELS[r.issue_type ?? "other"];
-  const cat = CATEGORY_LABELS[r.category ?? "other"].toLowerCase();
-  return [r.color, r.brand, cat].filter(Boolean).join(" ");
+  return itemTitle({ color: r.color, brand: r.brand, category: r.category ?? "other" });
 }
 
 export function reportIcon(r: Pick<Report, "type" | "issue_type" | "category">): string {
   return r.type === "issue" ? ISSUE_ICONS[r.issue_type ?? "other"] : CATEGORY_ICONS[r.category ?? "other"];
+}
+
+/** "Black Hydro Flask water bottle" (from the V1 design). */
+export function itemTitle(r: { color: string | null; category: Category | null; brand?: string | null }) {
+  if (!r.category) return "";
+  const label = CATEGORY_LABELS[r.category].toLowerCase().replace("airpods / earbuds", "earbuds");
+  const t = [r.color, r.brand, label].filter(Boolean).join(" ");
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }

@@ -1,0 +1,276 @@
+"use client";
+
+import Link from "next/link";
+import { useRef } from "react";
+import { BUILDING_GROUPS, BUILDINGS } from "@/lib/buildings";
+import { COLOR_SWATCHES } from "@/lib/types";
+import { SparkIcon, UploadIcon } from "./Icons";
+
+export interface Photo {
+  file: File;
+  url: string;
+}
+
+/** Page title block: back link, step counter (mobile), title, subtitle. */
+export function PageHead({
+  back,
+  step,
+  title,
+  sub,
+}: {
+  back: { label: string; href?: string; onClick?: () => void };
+  step?: string;
+  title: string;
+  sub?: string;
+}) {
+  const cls = "link text-[15px]";
+  return (
+    <div className="mb-6">
+      {back.href ? (
+        <Link href={back.href} className={cls}>← {back.label}</Link>
+      ) : (
+        <button type="button" onClick={back.onClick} className={cls}>← {back.label}</button>
+      )}
+      {step && <p className="mt-1.5 text-sm font-semibold text-muted lg:hidden">{step}</p>}
+      <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
+      {sub && <p className="mt-1.5 text-muted">{sub}</p>}
+    </div>
+  );
+}
+
+export function SectionHead({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="mb-3 flex items-baseline justify-between gap-3">
+      <h2 className="text-lg font-semibold">{title}</h2>
+      {hint && <span className="text-right text-sm text-muted">{hint}</span>}
+    </div>
+  );
+}
+
+/** Dashed drop zone. Camera on phones, drag-and-drop on desktop. */
+export function PhotoDrop({
+  photos,
+  max = 1,
+  onChange,
+  label,
+  hint,
+}: {
+  photos: Photo[];
+  max?: number;
+  onChange: (p: Photo[]) => void;
+  label: React.ReactNode;
+  hint?: string;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const add = (files: FileList | null) => {
+    if (!files) return;
+    const next = [...photos];
+    for (const f of Array.from(files)) {
+      if (!f.type.startsWith("image/")) continue;
+      if (next.length >= max) break;
+      next.push({ file: f, url: URL.createObjectURL(f) });
+    }
+    onChange(max === 1 ? next.slice(-1) : next);
+  };
+  const full = photos.length >= max;
+  return (
+    <div>
+      <p className="mb-1 text-[15px] font-semibold">{label}</p>
+      {hint && <p className="mb-3 text-[15px] text-muted">{hint}</p>}
+      {photos.length > 0 && (
+        <div className={`mb-3 grid gap-2 ${max > 1 ? "grid-cols-3" : "grid-cols-1"}`}>
+          {photos.map((p, i) => (
+            <div key={p.url} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.url} alt={`Photo ${i + 1}`} className={`w-full rounded-xl object-cover ${max > 1 ? "aspect-square" : "max-h-56"}`} />
+              <button
+                type="button"
+                onClick={() => onChange(photos.filter((_, j) => j !== i))}
+                className="absolute right-1.5 top-1.5 rounded-full bg-black/65 px-2.5 py-0.5 text-xs font-medium text-white"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {!full && (
+        <button
+          type="button"
+          onClick={() => ref.current?.click()}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            add(e.dataTransfer.files);
+          }}
+          className="flex w-full flex-col items-center justify-center gap-1 rounded-2xl border-[1.5px] border-dashed border-muted/60 bg-tint px-4 py-6 text-ink hover:border-bull"
+        >
+          <UploadIcon className="h-7 w-7" />
+          <span className="font-medium lg:hidden">{max > 1 ? "Add a photo" : "Take / choose photo"}</span>
+          <span className="hidden font-medium lg:inline">{max > 1 ? "Add a photo" : "Upload a photo"}</span>
+          <span className="text-sm text-muted lg:hidden">{max > 1 ? "Camera or library" : "Opens your camera or photo library"}</span>
+          <span className="hidden text-sm text-muted lg:inline">{max > 1 ? "Drag here or click" : "Drag an image here or click to browse"}</span>
+        </button>
+      )}
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        multiple={max > 1}
+        className="hidden"
+        onChange={(e) => {
+          add(e.target.files);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
+export function ChoiceGrid<T extends string>({
+  label,
+  options,
+  labels,
+  value,
+  onChange,
+  auto,
+}: {
+  auto?: boolean;
+  label: string;
+  options: readonly T[];
+  labels: Record<T, string>;
+  value: T | "";
+  onChange: (v: T) => void;
+}) {
+  return (
+    <fieldset>
+      <legend className="label">{label}{auto && <AutoTag />}</legend>
+      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+        {options.map((o) => (
+          <button
+            type="button"
+            key={o}
+            aria-pressed={value === o}
+            onClick={() => onChange(o)}
+            className={`chip ${value === o ? "chip-on" : ""}`}
+          >
+            {labels[o]}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+export function ColorSwatches({ value, onChange, auto }: { value: string; onChange: (v: string) => void; auto?: boolean }) {
+  return (
+    <fieldset>
+      <legend className="label">
+        Color <span className="font-normal text-muted">· {value || "none picked"}</span>
+        {auto && <AutoTag />}
+      </legend>
+      <div className="flex flex-wrap gap-2.5">
+        {COLOR_SWATCHES.map((c) => (
+          <button
+            type="button"
+            key={c.name}
+            title={c.name}
+            aria-label={c.name}
+            aria-pressed={value === c.name}
+            onClick={() => onChange(value === c.name ? "" : c.name)}
+            className={`h-11 w-11 rounded-full border border-black/15 transition ${
+              value === c.name ? "ring-[3px] ring-bull ring-offset-2" : "hover:scale-105"
+            }`}
+            style={{ background: c.hex }}
+          />
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+export function BuildingSelect({
+  id,
+  label,
+  value,
+  onChange,
+  note,
+  className = "",
+  auto,
+}: {
+  auto?: boolean;
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  note?: string | null;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label className="label" htmlFor={id}>{label}{auto && <AutoTag />}</label>
+      <select id={id} className="field" value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Choose a building</option>
+        {BUILDING_GROUPS.map((g) => (
+          <optgroup key={g.label} label={g.label}>
+            {BUILDINGS.filter(g.match).map((b) => (
+              <option key={b.code} value={b.name}>{b.name}</option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      {note && <p className="mt-1.5 text-sm text-muted">📍 {note}</p>}
+    </div>
+  );
+}
+
+export function ErrorNote({ children }: { children: React.ReactNode }) {
+  return <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{children}</p>;
+}
+
+/** Small pill next to a label for values we filled in from the photo. Disappears once the user edits. */
+export function AutoTag() {
+  return (
+    <span className="ml-2 inline-flex translate-y-[-1px] items-center gap-1 rounded-full bg-bull-soft px-2 py-0.5 align-middle text-xs font-semibold text-bull">
+      <SparkIcon className="h-3 w-3" /> Auto-filled
+    </span>
+  );
+}
+
+export type AutoState = { state: "idle" | "busy" | "done"; source?: "ai" | "basic" | "none"; count?: number };
+
+/** Status line under the photo while we read it and after we've filled fields in. */
+export function AutofillBanner({ auto, onUndo }: { auto: AutoState; onUndo?: () => void }) {
+  if (auto.state === "idle") return null;
+  if (auto.state === "busy")
+    return (
+      <div className="mt-3 flex items-center gap-3 rounded-2xl border border-bull/30 bg-bull-soft p-3.5 text-[15px] text-bull">
+        <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-bull border-t-transparent" />
+        Reading your photo and filling in the details...
+      </div>
+    );
+  if (!auto.count) {
+    return auto.source === "none" ? null : (
+      <p className="mt-3 text-sm text-muted">We couldn&apos;t read much from this photo. Fill in the details below.</p>
+    );
+  }
+  return (
+    <div className="mt-3 flex items-start gap-3 rounded-2xl border border-bull/30 bg-bull-soft p-3.5 text-[15px]">
+      <SparkIcon className="mt-0.5 h-5 w-5 shrink-0 text-bull" />
+      <p className="flex-1">
+        <strong>
+          {auto.source === "ai" ? `We filled in ${auto.count} field${auto.count > 1 ? "s" : ""} from your photo.` : "We guessed the color from your photo."}
+        </strong>{" "}
+        {auto.source === "ai"
+          ? "Check the ones marked Auto-filled and edit anything that's off."
+          : "Check it, then pick what the item is."}
+      </p>
+      {onUndo && (
+        <button type="button" onClick={onUndo} className="link shrink-0 text-sm">
+          Undo
+        </button>
+      )}
+    </div>
+  );
+}

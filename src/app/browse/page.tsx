@@ -1,13 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { ReportCard } from "@/components/ReportCard";
-import { BUILDINGS, canonicalBuildingName } from "@/lib/buildings";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { ItemCard } from "@/components/ItemCard";
+import { BUILDING_GROUPS, BUILDINGS, canonicalBuildingName } from "@/lib/buildings";
 import { listReports } from "@/lib/client";
-import { CATEGORY_LABELS, ITEM_CATEGORIES, type Report } from "@/lib/types";
+import { CATEGORIES, CATEGORY_LABELS, type Report } from "@/lib/types";
 
 export default function BrowsePage() {
+  return (
+    <Suspense>
+      <Browse />
+    </Suspense>
+  );
+}
+
+function Browse() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const tab = params.get("type") === "found" ? "found" : "lost";
   const [rows, setRows] = useState<Report[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -15,10 +27,11 @@ export default function BrowsePage() {
   const [bld, setBld] = useState("");
 
   useEffect(() => {
-    listReports("found")
+    setRows(null);
+    listReports(tab)
       .then((r) => setRows(r.filter((x) => x.status !== "resolved")))
       .catch((e) => setError(e.message));
-  }, []);
+  }, [tab]);
 
   const filtered = useMemo(() => {
     if (!rows) return [];
@@ -26,44 +39,70 @@ export default function BrowsePage() {
     return rows.filter((r) => {
       if (cat && r.category !== cat) return false;
       if (bld && canonicalBuildingName(r.building) !== bld) return false;
-      const hay = [r.description, r.color, r.brand, r.building, ...r.tags, r.category && CATEGORY_LABELS[r.category]].join(" ").toLowerCase();
+      const hay = [r.description, r.color, r.brand, r.building, r.spot, ...r.tags, r.category && CATEGORY_LABELS[r.category]]
+        .join(" ")
+        .toLowerCase();
       return terms.every((t) => hay.includes(t));
     });
   }, [rows, q, cat, bld]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-end justify-between">
-        <h1 className="text-2xl font-bold">Found on campus</h1>
-        <Link href="/report?intent=found" className="text-sm font-medium text-bull underline">Post a found item</Link>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <Link href="/" className="link text-[15px]">← Back to home</Link>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Browse {tab} items</h1>
+        </div>
+        <div className="flex rounded-full border border-line bg-white p-1 text-sm font-semibold">
+          {(["lost", "found"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => router.replace(t === "lost" ? "/browse" : "/browse?type=found")}
+              className={`rounded-full px-4 py-1.5 capitalize ${tab === t ? "bg-bull text-white" : "text-muted"}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
-      <input className="field" placeholder="Search: black iphone, keys, hydro flask…" value={q} onChange={(e) => setQ(e.target.value)} />
-      <div className="grid grid-cols-2 gap-3">
-        <select className="field" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
-          <option value="">All categories</option>
-          {ITEM_CATEGORIES.filter((c) => c !== "id_card").map((c) => (
+
+      <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr]">
+        <input className="field-soft" placeholder="Search: black iphone, keys, hydro flask..." value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="field-soft" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
+          <option value="">All item types</option>
+          {CATEGORIES.filter((c) => c !== "id_card").map((c) => (
             <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
           ))}
         </select>
-        <select className="field" value={bld} onChange={(e) => setBld(e.target.value)} aria-label="Building">
+        <select className="field-soft" value={bld} onChange={(e) => setBld(e.target.value)} aria-label="Building">
           <option value="">All buildings</option>
-          {BUILDINGS.map((b) => (
-            <option key={b.code} value={b.name}>{b.name}</option>
+          {BUILDING_GROUPS.map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {BUILDINGS.filter(g.match).map((b) => (
+                <option key={b.code} value={b.name}>{b.name}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>
+
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-      {!rows && !error && <div className="shimmer h-24 rounded-2xl" />}
-      {rows && filtered.length === 0 && <p className="card text-sm text-neutral-600">Nothing matches. Try fewer words.</p>}
-      <div className="space-y-3">
+      {!rows && !error && <p className="text-muted">Loading...</p>}
+      {tab === "lost" && (
+        <p className="text-sm text-muted">🔒 What makes a lost item unique stays private: it&apos;s how the office checks the real owner.</p>
+      )}
+      {rows && filtered.length === 0 && (
+        <p className="rounded-2xl border border-dashed border-line bg-white p-5 text-muted">Nothing matches. Try fewer words.</p>
+      )}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
         {filtered.map((r) => (
-          <ReportCard key={r.id} report={r} href={`/r/${r.id}`} />
+          <ItemCard
+            key={r.id}
+            report={r}
+            action={tab === "lost" ? { label: "I found this", href: `/found?for=${r.id}` } : { label: "This is mine", href: `/lost?for=${r.id}` }}
+          />
         ))}
       </div>
-      <p className="text-center text-xs text-neutral-500">
-        Think one is yours? <Link href="/report?intent=lost" className="underline">Report it lost</Link>: you&apos;ll see the match and which office has it.
-        IDs and cards are never listed here.
-      </p>
     </div>
   );
 }

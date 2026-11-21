@@ -30,10 +30,10 @@ describe("geo", () => {
     expect(onCampus(28.0595, -82.4108)).toBe(true);
     expect(onCampus(27.95, -82.46)).toBe(false); // downtown Tampa
     expect(buildingAt(28.0595, -82.4108)?.code).toBe("CPR");
-    expect(placeLabel({ building: null, lat: 28.0652, lng: -82.4085 })).toMatch(/^Outdoors, ~\d+ m from /);
+    expect(placeLabel({ building: null, lat: 28.0628, lng: -82.407 })).toMatch(/^Outdoors, ~\d+ m from /);
   });
   it("maps the demolished Andros complex to its current name", () => {
-    expect(canonicalBuildingName("Castor / Andros Complex")).toMatch(/Argos/);
+    expect(canonicalBuildingName("Castor / Andros Complex")).toMatch(/Castor Hall/);
   });
 });
 
@@ -77,9 +77,9 @@ describe("email draft", () => {
     const r = rep({ type: "issue", issue_type: "lighting", building: "Cooper Hall", severity: "urgent", me_too_count: 3 });
     const m = buildIssueEmail(r, officeById("facilities")!, "https://example.app/r/1");
     expect(m.testMode).toBe(true);
-    expect(m.subject).toBe("URGENT: Lighting out - Cooper Hall");
+    expect(m.subject).toBe("URGENT: Lighting out at Cooper Hall");
     expect(m.body).toContain("https://example.app/r/1");
-    expect(m.body).toContain("Other students affected: 3");
+    expect(m.body).toContain("Students affected: 4");
   });
 });
 

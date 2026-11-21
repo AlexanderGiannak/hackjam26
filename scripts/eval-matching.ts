@@ -21,7 +21,7 @@ function mk(type: "lost" | "found", [id, cat, color, code, hours, brand, text]: 
   const bl = code ? b(code) : null;
   const at = new Date(T0 + hours * 3_600_000).toISOString();
   return {
-    id, type, category: cat, color, brand, description: text, tags: [], photo_url: null,
+    id, type, category: cat, color, brand, description: text, tags: [], photo_url: null, photo_urls: [], spot: null,
     building: bl?.name ?? null, lat: bl?.lat ?? null, lng: bl?.lng ?? null, issue_type: null, severity: "normal",
     status: "open", visibility: "public", office_id: null, me_too_count: 0, events: [], occurred_at: at, created_at: at, updated_at: at,
   };
@@ -34,16 +34,16 @@ const PAIRS: [Row, Row][] = [
   [["L3", "phone", "black", "LIB", 0, "iPhone", "iPhone 15 in a clear case, cracked corner"], ["F3", "phone", "black", "LIB", 2, "Apple", "Phone in clear case with a cracked screen corner"]],
   [["L4", "phone", "blue", "ENB", 0, "Samsung", "Galaxy with a PopSocket"], ["F4", "phone", "navy", "ENB", 5, null, "Samsung phone, popsocket on the back"]],
   [["L5", "keys", "silver", "BSN", 0, null, "Two keys on a green lanyard"], ["F5", "keys", "silver", "BSN", 26, null, "Keys on lanyard, green"]],
-  [["L6", "keys", "black", "VIL", 0, "Toyota", "Car key fob with a Bulls keychain"], ["F6", "keys", "black", null, 30, null, "Toyota key fob, bull keychain, near the Village lot"]],
-  [["L7", "wallet", "brown", "JPH", 0, null, "Leather bifold, initials stamped inside"], ["F7", "wallet", "tan", "JPH", 8, null, "Bifold leather wallet"]],
+  [["L6", "keys", "black", "BEA", 0, "Toyota", "Car key fob with a Bulls keychain"], ["F6", "keys", "black", null, 30, null, "Toyota key fob, bull keychain, near the Beacon Hall lot"]],
+  [["L7", "wallet", "brown", "JUN", 0, null, "Leather bifold, initials stamped inside"], ["F7", "wallet", "tan", "JUN", 8, null, "Bifold leather wallet"]],
   [["L8", "laptop", "silver", "ENB", 0, "MacBook", "MacBook Air with a NASA sticker"], ["F8", "laptop", "gray", "ENB", 1, "Apple", "Laptop with NASA sticker on the lid"]],
   [["L9", "laptop", "black", "CPR", 0, "Dell", "Dell XPS in a grey sleeve"], ["F9", "laptop", "black", "CPR", 4, "Dell", "Laptop in a sleeve, left in room 103"]],
   [["L10", "bag", "navy", "CPR", 0, "JanSport", "Backpack with calculus textbook and charger"], ["F10", "bag", "blue", "CPR", 6, "JanSport", "Dark blue backpack, has a textbook inside"]],
   [["L11", "bag", "black", "REC", 0, "Nike", "Gym duffel with shoes and a towel"], ["F11", "bag", "black", "REC", 3, "Nike", "Duffel bag by the lockers, shoes inside"]],
-  [["L12", "headphones", "white", "REC", 0, "AirPods", "AirPods Pro case with a rocket sticker"], ["F12", "headphones", "white", "REC", 4, null, "Earbuds case with rocket sticker"]],
-  [["L13", "headphones", "black", "LIB", 0, "Sony", "Over-ear headphones, XM5"], ["F13", "headphones", "black", "LIB", 10, "Sony", "Sony over-ear headphones"]],
-  [["L14", "clothing", "gray", "MSC", 0, "USF", "USF hoodie size M"], ["F14", "clothing", "grey", "MSC", 2, null, "Gray hoodie with USF on it, medium"]],
-  [["L15", "clothing", "green", "SOC", 0, null, "Rain jacket with a hood"], ["F15", "clothing", "olive", "SOC", 22, null, "Green hooded rain jacket"]],
+  [["L12", "earbuds", "white", "REC", 0, "AirPods", "AirPods Pro case with a rocket sticker"], ["F12", "earbuds", "white", "REC", 4, null, "Earbuds case with rocket sticker"]],
+  [["L13", "earbuds", "black", "LIB", 0, "Sony", "Over-ear headphones, XM5"], ["F13", "earbuds", "black", "LIB", 10, "Sony", "Sony over-ear headphones"]],
+  [["L14", "jacket", "gray", "MSC", 0, "USF", "USF hoodie size M"], ["F14", "jacket", "grey", "MSC", 2, null, "Gray hoodie with USF on it, medium"]],
+  [["L15", "jacket", "green", "SOC", 0, null, "Rain jacket with a hood"], ["F15", "jacket", "olive", "SOC", 22, null, "Green hooded rain jacket"]],
   [["L16", "id_card", "green", "LIB", 0, null, "USF ID"], ["F16", "id_card", "green", "LIB", 1, null, "USF student ID card"]],
   [["L17", "other", "black", "ISA", 0, "TI", "TI-84 calculator with my initials"], ["F17", "other", "black", "ISA", 5, "Texas Instruments", "Graphing calculator TI-84"]],
   [["L18", "other", "red", "CIS", 0, null, "Umbrella, folding"], ["F18", "other", "maroon", "CIS", 30, null, "Folding umbrella left by the door"]],
@@ -52,7 +52,7 @@ const PAIRS: [Row, Row][] = [
   [["L21", "keys", "gold", "HOL", 0, null, "Room key and mailbox key on a ring"], ["F21", "keys", "gold", "HOL", 12, null, "Two small keys on a ring, mailbox key"]],
   [["L22", "wallet", "black", "BSN", 0, "Coach", "Card holder, zip"], ["F22", "wallet", "black", "BSN", 3, "Coach", "Small zip card holder"]],
   [["L23", "bag", "pink", "LIB", 0, null, "Tote bag with books"], ["F23", "bag", "pink", null, 40, null, "Canvas tote with library books"]],
-  [["L24", "headphones", "blue", "ENB", 0, "Beats", "Beats Studio, blue"], ["F24", "headphones", "blue", "ENB", 6, "Beats", "Blue headphones"]],
+  [["L24", "earbuds", "blue", "ENB", 0, "Beats", "Beats Studio, blue"], ["F24", "earbuds", "blue", "ENB", 6, "Beats", "Blue headphones"]],
 ];
 
 const DECOYS: Row[] = [
@@ -66,9 +66,9 @@ const DECOYS: Row[] = [
   ["D8", "laptop", "silver", "LIB", 3, "HP", "HP laptop"],
   ["D9", "bag", "black", "CPR", 5, null, "Black backpack"],
   ["D10", "bag", "navy", "REC", 4, null, "Navy drawstring bag"],
-  ["D11", "headphones", "white", "LIB", 6, "Apple", "Wired earphones"],
-  ["D12", "clothing", "gray", "REC", 3, null, "Gray sweatpants"],
-  ["D13", "clothing", "green", "MSC", 2, null, "Green t-shirt"],
+  ["D11", "earbuds", "white", "LIB", 6, "Apple", "Wired earphones"],
+  ["D12", "jacket", "gray", "REC", 3, null, "Gray sweatpants"],
+  ["D13", "jacket", "green", "MSC", 2, null, "Green t-shirt"],
   ["D14", "other", "black", "ENB", 4, null, "Black umbrella"],
   ["D15", "bottle", "white", "MSC", 2, null, "White cup"],
   ["D16", "phone", "white", "LIB", 6, "iPhone", "White iPhone, no case"],

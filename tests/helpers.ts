@@ -13,7 +13,9 @@ export function rep(p: Partial<Report> & Pick<Report, "type">): Report {
     description: "",
     tags: [],
     photo_url: null,
+    photo_urls: [],
     building: null,
+    spot: null,
     lat: null,
     lng: null,
     issue_type: null,
@@ -38,6 +40,7 @@ export function input(p: Partial<NewReport> & Pick<NewReport, "type">): NewRepor
     description: "",
     tags: [],
     building: null,
+    spot: null,
     lat: 28.0595, // Cooper Hall
     lng: -82.4108,
     issue_type: null,
