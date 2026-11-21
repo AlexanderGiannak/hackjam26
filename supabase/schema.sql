@@ -1,155 +1,76 @@
--- campus-helper schema. Run in Supabase Dashboard -> SQL Editor (free tier).
--- Safe to re-run.
+-- Bullhorn schema. Run in Supabase Dashboard -> SQL Editor (free tier). Safe to re-run.
+--
+-- Security model: the browser never talks to these tables. Row Level Security is ON with NO policies for
+-- anon/authenticated, so the public anon key can read and write nothing. Every read and write goes through
+-- the Next.js API routes, which use the service role key (server-only) and apply the rules in src/lib/service.ts.
 
 create extension if not exists pgcrypto;
 
--- ---------- offices (hand-built, verified by the team) ----------
-create table if not exists public.offices (
-  id          text primary key,
-  name        text not null,
-  handles     text not null,
-  categories  text[] not null default '{}',
-  hours       jsonb,                 -- [{ "days":[1,2,3,4,5], "open":"08:00", "close":"17:00", "lunch":{...} }] or null = unknown
-  always_open boolean not null default false,
-  phone       text,
-  email       text,
-  url         text,
-  location    text,
-  sort_order  int not null default 100,
-  verified    boolean not null default false
+drop view if exists public.reports_with_counts;
+drop function if exists public.me_too(uuid);
+drop function if exists public.set_report_status(uuid, text);
+drop table if exists public.me_too cascade;
+drop table if exists public.claims cascade;
+drop table if exists public.me_too_votes cascade;
+drop table if exists public.reports cascade;
+drop table if exists public.offices cascade; -- offices now live in src/lib/offices.ts (one source of truth, reviewed in PRs)
+
+create table public.reports (
+  id           text primary key,
+  type         text not null check (type in ('lost','found','issue')),
+  category     text check (category in ('phone','wallet','laptop','id_card','bottle','keys','bag','headphones','clothing','other')),
+  color        text check (char_length(color) <= 40),
+  brand        text check (char_length(brand) <= 60),
+  description  text not null default '' check (char_length(description) <= 500),
+  tags         text[] not null default '{}',
+  photo_url    text,
+  building     text,
+  lat          double precision check (lat between 28.05 and 28.075),
+  lng          double precision check (lng between -82.43 and -82.40),
+  issue_type   text check (issue_type in ('lighting','water','door','elevator','furniture','restroom','trash','road','parking','safety','other')),
+  severity     text not null default 'normal' check (severity in ('low','normal','urgent')),
+  status       text not null default 'open' check (status in ('open','routed','in_progress','resolved')),
+  visibility   text not null default 'public' check (visibility in ('public','private')),
+  office_id    text,
+  owner_token  text not null,
+  me_too_count int not null default 0,
+  events       jsonb not null default '[]',
+  occurred_at  timestamptz not null,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  constraint issue_needs_type check (type <> 'issue' or issue_type is not null),
+  constraint item_needs_category check (type = 'issue' or category is not null),
+  constraint private_ids_and_parking check (
+    visibility = 'private' or (coalesce(category, '') <> 'id_card' and coalesce(issue_type, '') <> 'parking'))
+);
+create index reports_type_created_idx on public.reports (type, created_at desc);
+create index reports_open_idx on public.reports (status) where status <> 'resolved';
+
+-- One "me too" per device per issue: the primary key is the dedupe.
+create table public.me_too_votes (
+  report_id  text not null references public.reports(id) on delete cascade,
+  voter      text not null,
+  created_at timestamptz not null default now(),
+  primary key (report_id, voter)
 );
 
--- ---------- reports ----------
-create table if not exists public.reports (
-  id          uuid primary key default gen_random_uuid(),
-  type        text not null check (type in ('lost','found','broken')),
-  category    text check (category in ('phone','wallet','laptop','id_card','bottle','keys','bag','other')),
-  color       text,
-  brand       text,
-  description text not null default '',
-  photo_url   text,
-  building    text,
-  lat         double precision,
-  lng         double precision,
-  issue_type  text check (issue_type in ('lighting','fountain','door','furniture','other')),
-  user_id     uuid,
-  status      text not null default 'open'
-              check (status in ('open','matched','closed','reported','sent','resolved')),
-  occurred_at timestamptz not null default now(),
-  created_at  timestamptz not null default now(),
-  constraint found_needs_photo check (type <> 'found' or photo_url is not null),
-  constraint broken_needs_issue check (type <> 'broken' or issue_type is not null)
-);
-create index if not exists reports_type_idx on public.reports (type, created_at desc);
-
--- ---------- me_too (stretch) ----------
-create table if not exists public.me_too (
-  report_id uuid primary key references public.reports(id) on delete cascade,
-  count     int not null default 0
-);
-
-create or replace view public.reports_with_counts
-with (security_invoker = true) as
-  select r.*, coalesce(m.count, 0) as me_too_count
-  from public.reports r left join public.me_too m on m.report_id = r.id;
-
--- ---------- claims (only if the claim check is built) ----------
-create table if not exists public.claims (
-  id         uuid primary key default gen_random_uuid(),
-  report_id  uuid references public.reports(id) on delete cascade,
-  answer     text not null,
-  created_at timestamptz not null default now()
-);
-
--- ---------- RPCs (anonymous users can only do these narrow updates) ----------
-create or replace function public.me_too(rid uuid) returns int
-language plpgsql security definer set search_path = public as $$
-declare n int;
-begin
-  insert into me_too (report_id, count) values (rid, 1)
-  on conflict (report_id) do update set count = me_too.count + 1
-  returning count into n;
-  return n;
-end $$;
-
-create or replace function public.set_report_status(rid uuid, new_status text) returns void
-language plpgsql security definer set search_path = public as $$
-begin
-  update reports set status = new_status
-  where id = rid
-    and ((type = 'broken' and new_status in ('reported','sent','resolved'))
-      or (type <> 'broken' and new_status in ('open','matched','closed')));
-end $$;
-
-grant execute on function public.me_too(uuid) to anon, authenticated;
-grant execute on function public.set_report_status(uuid, text) to anon, authenticated;
-
--- ---------- Row level security ----------
-alter table public.offices enable row level security;
 alter table public.reports enable row level security;
-alter table public.me_too  enable row level security;
-alter table public.claims  enable row level security;
+alter table public.me_too_votes enable row level security;
+-- Intentionally no policies: only the service role (server) can touch these tables.
+revoke all on public.reports, public.me_too_votes from anon, authenticated;
 
-drop policy if exists "offices readable" on public.offices;
-create policy "offices readable" on public.offices for select using (true);
-
-drop policy if exists "reports readable" on public.reports;
-create policy "reports readable" on public.reports for select using (true);
-drop policy if exists "anyone can report" on public.reports;
-create policy "anyone can report" on public.reports for insert with check (true);
-
-drop policy if exists "me_too readable" on public.me_too;
-create policy "me_too readable" on public.me_too for select using (true);
-
-drop policy if exists "anyone can claim" on public.claims;
-create policy "anyone can claim" on public.claims for insert with check (true);
--- claims are NOT readable by anon on purpose.
-
--- ---------- Storage bucket for photos (public read, anon upload) ----------
-insert into storage.buckets (id, name, public) values ('photos', 'photos', true)
-on conflict (id) do nothing;
+-- ---------- Storage ----------
+-- Public photos: readable by anyone with the URL, writable only by the server, small JPEGs only.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('photos', 'photos', true, 2621440, array['image/jpeg'])
+on conflict (id) do update set public = true, file_size_limit = 2621440, allowed_mime_types = array['image/jpeg'];
+-- Private photos (IDs, parking): no public URL, the server hands out 10-minute signed URLs to the owner and staff.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('private-photos', 'private-photos', false, 2621440, array['image/jpeg'])
+on conflict (id) do update set public = false, file_size_limit = 2621440, allowed_mime_types = array['image/jpeg'];
 
 drop policy if exists "anon upload photos" on storage.objects;
-create policy "anon upload photos" on storage.objects for insert
-  with check (bucket_id = 'photos');
 drop policy if exists "public read photos" on storage.objects;
-create policy "public read photos" on storage.objects for select
-  using (bucket_id = 'photos');
+-- No storage.objects policies: anon cannot upload anything. Public bucket reads work through the CDN URL.
 
--- ---------- Seed offices: phones checked against official USF pages 2026-11-21 (see src/lib/offices.ts for sources) ----------
--- Library hours: regular Fall 2026 week from USF LibCal (checked 2026-11-21). Windows with close <= open run past midnight.
-insert into public.offices (id, name, handles, categories, hours, always_open, phone, email, url, location, sort_order, verified) values
- ('upd', 'USF Police (Lost & Found)', 'Lost and found property, especially valuables like phones, wallets, and laptops. Emergencies: call 911.',
-   '{phone,wallet,laptop,keys,bag,valuables,other}', null, true, '813-974-2628', null,
-   'https://www.usf.edu/public-safety/university-police/about/contact-up.aspx', '13152 USF Genshaft Drive, Tampa', 1, true),
- ('card', 'USF Card Center', 'Lost or found USF ID cards. Found IDs should go here, not on a public list.',
-   '{id_card}', '[{"days":[1,2,3,4,5],"open":"09:00","close":"17:00"}]', false, '813-974-4357', 'help@usf.edu',
-   'https://www.usf.edu/it/resources/usf-card', 'Tampa Campus Library', 2, true),
- ('lib-tampa', 'Tampa Campus Library Service Desk', 'Items left in the Tampa Campus Library (held 30 days), and library building issues.',
-   '{library}', '[{"days":[0],"open":"10:00","close":"02:00"},{"days":[1,2,3,4],"open":"07:00","close":"02:00"},{"days":[5],"open":"07:00","close":"20:00"},{"days":[6],"open":"10:00","close":"20:00"}]',
-   false, '813-974-2729', null, 'https://lib.usf.edu/forms/report-a-problem/', '4101 USF Apple Dr, 1st floor', 3, true),
- ('lib-shimberg', 'Shimberg Health Sciences Library Desk', 'Items left in the Shimberg Health Sciences Library, and library building issues.',
-   '{library}', '[{"days":[0],"open":"12:00","close":"20:00"},{"days":[1,2,3,4],"open":"08:00","close":"20:00"},{"days":[5],"open":"08:00","close":"18:00"},{"days":[6],"open":"10:00","close":"18:00"}]',
-   false, '813-974-8432', null, 'https://libraries.health.usf.edu/about/shimberg', '12908 Bruce B. Downs Blvd', 4, true),
- ('facilities', 'Facilities Service Center', 'Broken lights, doors, fountains, and furniture in non-residential buildings. After-hours emergencies: 813-974-2845 (24/7).',
-   '{facilities,lighting,fountain,door,furniture,other}', '[{"days":[1,2,3,4,5],"open":"08:00","close":"17:00"}]', false,
-   '813-974-2750', 'FM-ServiceCenter@usf.edu', 'https://www.usf.edu/facilities/service-center/contact-us.aspx',
-   '3820 USF Holly Drive (next to the USF Post Office)', 5, true),
- ('housing', 'Housing & Residential Education Maintenance', 'Maintenance problems in residence halls. USF Village residents call 813-974-0764. After hours, contact your RA on duty.',
-   '{housing}', '[{"days":[1,2,3,4,5],"open":"08:00","close":"17:00"}]', false, '813-974-3446', null,
-   'https://assetessentials.dudesolutions.com/USFH/', null, 6, true)
-on conflict (id) do update set
-  name = excluded.name, handles = excluded.handles, categories = excluded.categories, hours = excluded.hours,
-  always_open = excluded.always_open, phone = excluded.phone, email = excluded.email, url = excluded.url,
-  location = excluded.location, sort_order = excluded.sort_order, verified = excluded.verified;
-
--- ---------- Demo seed reports (found phone + lost bottle make the demo matches work) ----------
--- Found reports need a photo_url; replace the placeholder with a real uploaded photo before the demo.
-insert into public.reports (type, category, color, brand, description, photo_url, building, status, occurred_at)
-select * from (values
-  ('found', 'phone', 'black', 'iPhone', 'Black iPhone in a clear case, found on a study table on the 2nd floor.',
-     'https://placehold.co/600x400?text=Found+phone', 'Tampa Campus Library', 'open', now() - interval '3 hours'),
-  ('lost', 'bottle', 'black', null, 'Black insulated water bottle with a USF Bulls sticker.',
-     null, 'Marshall Student Center', 'open', now() - interval '20 hours')
-) as v(type, category, color, brand, description, photo_url, building, status, occurred_at)
-where not exists (select 1 from public.reports);
+-- Demo data: run `npm run seed:sql` and paste its output here to load the same week the demo mode shows.
