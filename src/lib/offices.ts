@@ -11,18 +11,21 @@ import type { Office } from "./types";
  */
 export const OFFICES: Office[] = [
   {
-    // https://www.usf.edu/public-safety/university-police/about/contact-up.aspx
+    // https://www.usf.edu/public-safety/university-police/about/contact-up.aspx (24/7 line)
+    // https://www.usf.edu/public-safety/university-police/about/police-services.aspx (pickup hours, 813-974-3955, offense # + photo ID, 30-day auction), checked 2026-11-21
     id: "upd",
     short: "USF Police",
     name: "USF Police (Lost & Found)",
-    handles: "Lost and found property, especially valuables like phones, wallets, and laptops. Dispatch answers 24/7; emergencies: call 911.",
+    handles:
+      "Valuables: phones, wallets, laptops, keys, credit cards, driver's licenses. Report a lost one 24/7 at 813-974-2628 and keep the offense number. Before pickup, call 813-974-3955; bring the offense number and a photo ID. Unclaimed property is auctioned after 30 days.",
     categories: ["phone", "wallet", "laptop", "keys", "bag", "valuables", "safety", "other"],
-    // Dispatch answers 24/7, but property pickup hours are not published on the contact page, so no "Open now" badge.
-    hours: null,
+    // Property pickup window from the police-services page (dispatch itself answers 24/7).
+    hours: [{ days: [1, 2, 3, 4, 5], open: "08:30", close: "15:30", lunch: { start: "12:00", end: "13:00" } }],
+    hours_for: "Property pickup",
     phone: "813-974-2628",
     email: null,
-    url: "https://www.usf.edu/public-safety/university-police/about/contact-up.aspx",
-    location: "13152 USF Genshaft Drive, Tampa",
+    url: "https://www.usf.edu/public-safety/university-police/about/police-services.aspx",
+    location: "USF Police Building, 13152 USF Genshaft Drive",
     sort_order: 1,
     verified: true,
   },
@@ -31,7 +34,10 @@ export const OFFICES: Office[] = [
     id: "card",
     short: "Card Center",
     name: "USF Card Center",
-    handles: "Lost or found USF ID cards. Found IDs should go here, not on a public list.",
+    // Found IDs: https://lib.usf.edu/services/lost-and-found says they go to the USF Card Office, bottom floor of the
+    // Student Services Building (SVC). The Card Center itself (replacements) lists "USF Library". Both checked 2026-11-21.
+    handles:
+      "Lost or found USF ID cards and replacements. Found IDs are sent to the Card Office on the bottom floor of the Student Services Building (SVC).",
     categories: ["id_card"],
     hours: [{ days: [1, 2, 3, 4, 5], open: "09:00", close: "17:00" }],
     phone: "813-974-4357",
@@ -48,7 +54,8 @@ export const OFFICES: Office[] = [
     id: "lib-tampa",
     short: "Tampa Library",
     name: "Tampa Campus Library Service Desk",
-    handles: "Items left in the Tampa Campus Library (held 30 days), and library building issues.",
+    handles:
+      "Items left in the Tampa Campus Library, held 30 days. Valuables go straight to USF Police and IDs to the Card Office. Food, drink and hygiene items may be thrown out sooner.",
     categories: ["library"],
     hours: [
       { days: [0], open: "10:00", close: "02:00" },
@@ -147,6 +154,21 @@ export const OFFICES: Office[] = [
     location: "13311 USF Plum Drive (Parking & Transportation Building)",
     sort_order: 8,
     verified: false,
+  },
+  {
+    // https://www.usf.edu/cbcs/about-cbcs/intranet/facilities/building-support.aspx (checked 2026-11-21)
+    id: "cbcs",
+    short: "CBCS Building Support",
+    name: "CBCS Building Support",
+    handles: "Lost and found inside the MHC and MHA buildings. Call the cell first: staff are rarely at the office phone (813-974-4593).",
+    categories: ["cbcs"],
+    hours: null,
+    phone: "813-230-9839",
+    email: null,
+    url: "https://www.usf.edu/cbcs/about-cbcs/intranet/facilities/building-support.aspx",
+    location: "MHC 1301",
+    sort_order: 9,
+    verified: true,
   },
 ];
 

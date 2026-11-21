@@ -1,4 +1,4 @@
-import { findBuilding } from "./buildings";
+import { BUILDINGS, findBuilding, haversine, type Building } from "./buildings";
 import { officeById } from "./offices";
 import type { Category, IssueType, Office, Report } from "./types";
 
@@ -11,9 +11,54 @@ export interface Step {
   why: string;
 }
 
-const VALUABLES: Category[] = ["phone", "earbuds", "laptop", "tablet", "wallet"];
+/** Valuables: every campus desk hands these to USF Police the same day (MSC and Library lost & found pages). */
+const VALUABLES: Category[] = ["phone", "earbuds", "laptop", "tablet", "wallet", "keys"];
 
-/** Ordered next-steps checklist for a lost item. */
+/** The two big general lost-and-found desks. Everyday items found outdoors usually end up at the closer one. */
+const HUBS = ["msc", "lib-tampa"] as const;
+
+/**
+ * Stand-in "office" for a building with no lost-and-found desk of its own: go back to the room and ask the
+ * building's front office. Ids start with "local-" and are never stored on a report.
+ */
+export function buildingFrontOffice(b: Building): Office {
+  return {
+    id: `local-${b.code}`,
+    short: `${b.code} front office`,
+    name: `${b.name}: the room, then the front office`,
+    handles: "",
+    categories: [],
+    hours: null,
+    phone: null,
+    email: null,
+    url: null,
+    location: b.name,
+    sort_order: 0,
+    verified: true,
+  };
+}
+export const isLocalStep = (o: Office) => o.id.startsWith("local-");
+
+/** MSC and Library desks, closest to the building first (MSC first when we don't know where). */
+function hubsByDistance(offices: Office[], b: Building | undefined): Office[] {
+  const hubs = HUBS.map((id) => officeById(id, offices)).filter((o): o is Office => !!o);
+  if (!b) return hubs;
+  const at = (id: string) => BUILDINGS.find((x) => x.deskOfficeId === id);
+  const d = (o: Office) => {
+    const h = at(o.id);
+    return h ? haversine(b.lat, b.lng, h.lat, h.lng) : Infinity;
+  };
+  return [...hubs].sort((x, y) => d(x) - d(y));
+}
+
+/**
+ * Ordered "who to ask" for a lost item, following the USF Tampa lost & found rules:
+ * - IDs: the Card Office; USF Police if it may be stolen.
+ * - Valuables (phones, wallets, laptops, keys...): USF Police first, since desks hand them over the same day;
+ *   the building's desk second in case it was only just turned in.
+ * - Everything else stays near where it was lost: the building's desk (or the room and front office), then the
+ *   MSC Information Desk and the Library desk. USF Police doesn't keep everyday items.
+ */
 export function lostChecklist(offices: Office[], category: Category | null, buildingName: string | null): Step[] {
   const steps: Step[] = [];
   const add = (o: Office | undefined, why: string) => {
@@ -24,16 +69,36 @@ export function lostChecklist(offices: Office[], category: Category | null, buil
   const upd = officeById("upd", offices);
 
   if (category === "id_card") {
-    add(officeById("card", offices), "Found IDs are turned in to the Card Center, and it can deactivate and reprint your card.");
+    add(
+      officeById("card", offices),
+      "Found USF IDs are sent to the Card Office (bottom floor of the Student Services Building). The Card Center can also turn off the lost card and print a new one.",
+    );
+    add(upd, "If you think it was stolen, or a driver's license or bank card was with it, report it to USF Police.");
+    return steps;
   }
-  // An item left in a building with a desk (libraries, the Marshall Center) is held there first, so ask there first.
-  if (desk && b) {
-    add(desk, `You think you lost it in ${b.name}. Items left there are turned in to this desk first.`);
-  }
+
   if (category && VALUABLES.includes(category)) {
-    add(upd, "USF Police keeps lost valuables like phones, wallets, and laptops.");
+    add(
+      upd,
+      "Campus desks hand valuables to USF Police the same day. Call the 24/7 line to file a lost property report, keep the offense number, and give the serial number or any marks. Call 813-974-3955 before you go to pick it up.",
+    );
+    if (desk && b) add(desk, `If you lost it in ${b.name} in the last few hours, this desk may still have it before it goes to USF Police.`);
+    else if (b) add(buildingFrontOffice(b), `Go back to the room and ask ${b.name}'s front office, in case it hasn't been sent to USF Police yet.`);
+    return steps;
   }
-  add(upd, "USF Police runs campus lost and found. Anything not claimed elsewhere ends up here.");
+
+  const sanitary =
+    category === "bottle" ? " Ask soon: food, drink and hygiene items can be thrown out early for sanitation." : "";
+  if (desk && b) add(desk, `Items left in ${b.name} are turned in to this desk and held for 30 days.${sanitary}`);
+  else if (b)
+    add(
+      buildingFrontOffice(b),
+      `Go back to the room you were in, then ask at ${b.name}'s main office or front desk. Everyday items usually stay in the building where they were found.${sanitary}`,
+    );
+  for (const h of hubsByDistance(offices, b)) {
+    add(h, "Things found outdoors or around central campus are often dropped at the closest big desk, which holds them for 30 days.");
+  }
+  if (category === "bag") add(upd, "If your bag had a phone, wallet or laptop in it, the desk may have sent it to USF Police.");
   return steps;
 }
 
@@ -43,16 +108,24 @@ export function foundDropoff(offices: Office[], category: Category | null, build
   const upd = officeById("upd", offices)!;
   if (category === "id_card") {
     const card = officeById("card", offices);
-    if (card) return { office: card, why: "IDs go to the Card Center so the owner's information stays private." };
+    if (card)
+      return {
+        office: card,
+        why: "USF IDs go to the Card Office (bottom floor of the Student Services Building). After hours, or for a driver's license or bank card, take it to USF Police.",
+      };
   }
-  if (category && (VALUABLES.includes(category) || category === "keys")) {
-    return { office: upd, why: "USF Police takes valuables and keys so they are stored securely." };
+  if (category && VALUABLES.includes(category)) {
+    return { office: upd, why: "Valuables and keys end up at USF Police anyway (desks send them over the same day), so take it straight there." };
   }
   const desk = officeById(b?.deskOfficeId, offices);
   if (desk && b) {
-    return { office: desk, why: `It was found in ${b.name}, so this desk is the first place the owner will look.` };
+    return { office: desk, why: `It was found in ${b.name}, so this desk is the first place the owner will look. It holds items for 30 days.` };
   }
-  return { office: upd, why: "USF Police runs campus lost and found." };
+  const hub = hubsByDistance(offices, b)[0] ?? upd;
+  return {
+    office: hub,
+    why: `${b ? `${b.name} has no lost-and-found desk, so` : "Found outdoors?"} take it to the closest big desk. It holds everyday items for 30 days.`,
+  };
 }
 
 export type Channel = { kind: "email" | "link" | "call"; office: Office; why: string; label: string; urgent?: boolean; hint?: string };
@@ -122,5 +195,5 @@ export function issueChannel(offices: Office[], issueType: IssueType | null, bui
 export function assignOffice(offices: Office[], r: Pick<Report, "type" | "category" | "building" | "issue_type">): Office {
   if (r.type === "issue") return issueChannel(offices, r.issue_type, r.building).office;
   if (r.type === "found") return foundDropoff(offices, r.category, r.building).office;
-  return lostChecklist(offices, r.category, r.building)[0].office;
+  return lostChecklist(offices, r.category, r.building).find((s) => !isLocalStep(s.office))!.office;
 }

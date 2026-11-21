@@ -203,6 +203,8 @@ export interface Office {
   /** null = unknown / not verified yet. Empty array = closed. */
   hours: HoursRule[] | null;
   always_open?: boolean;
+  /** what `hours` covers when it isn't the whole office, e.g. "Property pickup" (the phone line may be 24/7) */
+  hours_for?: string;
   phone: string | null;
   email: string | null;
   url: string | null;

@@ -98,9 +98,9 @@ export function FoundId() {
       </Tip>
       <section>
         <h2 className="text-lg font-bold">Where to take it</h2>
-        <p className="mb-3 text-[15px] text-muted">USF ID? Card Center. Driver&apos;s license, bank card, or after hours? USF Police.</p>
+        <p className="mb-3 text-[15px] text-muted">USF ID? The Card Office, bottom floor of the Student Services Building (SVC). Driver&apos;s license, bank card, or after hours? USF Police.</p>
         <div className="space-y-3">
-          <OfficeCard office={card} why="USF ID cards go here. The owner can also get a replacement here." />
+          <OfficeCard office={card} why="USF ID cards go to the Card Office on the bottom floor of the Student Services Building (SVC)." />
           <OfficeCard office={upd} why="Driver's licenses, credit and debit cards, and any ID found after hours." />
         </div>
       </section>

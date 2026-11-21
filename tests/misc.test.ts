@@ -20,8 +20,16 @@ describe("hours", () => {
     expect(isOpenNow(lib, et("2026-11-21T21:00:00-05:00"))).toBe(false); // Sat closes 8pm
   });
   it("says so when hours are unknown instead of guessing", () => {
-    expect(isOpenNow(officeById("upd")!)).toBeNull();
-    expect(hoursLabel(officeById("upd")!)).toMatch(/not confirmed/);
+    expect(isOpenNow(officeById("msc")!)).toBeNull();
+    expect(hoursLabel(officeById("msc")!)).toMatch(/not confirmed/);
+  });
+  it("USF Police property pickup closes for lunch", () => {
+    const upd = officeById("upd")!;
+    // Wednesday 2026-11-18, Eastern time
+    expect(isOpenNow(upd, new Date("2026-11-18T10:00:00-05:00"))).toBe(true);
+    expect(isOpenNow(upd, new Date("2026-11-18T12:30:00-05:00"))).toBe(false);
+    expect(isOpenNow(upd, new Date("2026-11-18T16:00:00-05:00"))).toBe(false);
+    expect(hoursLabel(upd)).toBe("Mon-Fri 8:30am-3:30pm (closed 12pm-1pm)");
   });
 });
 

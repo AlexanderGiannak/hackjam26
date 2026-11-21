@@ -28,6 +28,8 @@ export const BUILDINGS: Building[] = [
   { code: "SOC", name: "Social Sciences", kind: "academic", lat: 28.0614, lng: -82.4097 },
   { code: "CIS", name: "Communication and Information Sciences", kind: "academic", lat: 28.0585, lng: -82.4111 },
   { code: "HON", name: "Judy Genshaft Honors College", kind: "academic", lat: 28.0596, lng: -82.4094 },
+  // MHC centroid from OpenStreetMap ("Florida Mental Health Institute"). MHA is next door and shares the same desk.
+  { code: "MHC", name: "Behavioral & Community Sciences (MHC / MHA)", kind: "academic", lat: 28.0679, lng: -82.4229, deskOfficeId: "cbcs" },
   // Residence halls (traditional & suite-style). Centroids from OpenStreetMap, 2026-11-21.
   { code: "BEA", name: "Beacon Hall", kind: "dorm", lat: 28.0674, lng: -82.4126 },
   { code: "BET", name: "Beta Hall", kind: "dorm", lat: 28.065, lng: -82.4093 },
@@ -62,6 +64,7 @@ export const BUILDING_TERMS: Record<string, string> = {
   SOC: "social sciences, sociology, anthropology, political science, classes",
   CIS: "communication, information sciences, mass communications, journalism, advertising, media",
   HON: "honors, honors college, Genshaft, honors students, honors advising",
+  MHC: "CBCS, behavioral sciences, community sciences, mental health, FMHI, MHA, Westside Conference Center, social work, rehab counseling",
   BEA: "The Village",
   END: "The Village",
   HOR: "The Village",
